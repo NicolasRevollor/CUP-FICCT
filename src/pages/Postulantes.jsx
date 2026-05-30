@@ -18,8 +18,8 @@ function Postulantes() {
     setLoading(true)
     try {
       const url = query
-        ? `http://https://cup-ficct-production.up.railway.app/api/postulantes/buscar?q=${query}&page=${page}`
-        : `http://https://cup-ficct-production.up.railway.app/api/postulantes?page=${page}`
+        ? `https://cup-ficct-production.up.railway.app/api/postulantes/buscar?q=${query}&page=${page}`
+        : `https://cup-ficct-production.up.railway.app/api/postulantes?page=${page}`
 
       const res = await fetch(url)
       const data = await res.json()
@@ -45,7 +45,7 @@ function Postulantes() {
 
   const handleEliminar = async (id) => {
     if (!window.confirm('¿Está seguro de eliminar este postulante?')) return
-    await fetch(`http://https://cup-ficct-production.up.railway.app/api/postulantes/${id}`, { method: 'DELETE' })
+    await fetch(`https://cup-ficct-production.up.railway.app/api/postulantes/${id}`, { method: 'DELETE' })
     fetchPostulantes(currentPage, busqueda)
   }
 

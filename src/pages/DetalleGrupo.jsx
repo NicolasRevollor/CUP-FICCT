@@ -20,7 +20,7 @@ function DetalleGrupo() {
   if (!usuario) return null
 
   const fetchGrupo = async () => {
-    const res = await fetch('http://localhost:8000/api/grupos')
+    const res = await fetch('https://cup-ficct-production.up.railway.app/api/grupos')
     const data = await res.json()
     const g = data.find(g => g.idgrupo === parseInt(id))
     setGrupo(g)
@@ -29,7 +29,7 @@ function DetalleGrupo() {
   const fetchPostulantes = async () => {
     setLoading(true)
     try {
-      const res = await fetch(`http://localhost:8000/api/grupos/${id}/postulantes`)
+      const res = await fetch(`https://cup-ficct-production.up.railway.app/api/grupos/${id}/postulantes`)
       const data = await res.json()
       setPostulantes(data)
     } catch (err) {
@@ -51,7 +51,7 @@ function DetalleGrupo() {
 
     // Buscar postulante por CI
     try {
-      const resBuscar = await fetch(`http://localhost:8000/api/postulantes/buscar?q=${ciAsignar}`)
+      const resBuscar = await fetch(`https://cup-ficct-production.up.railway.app/api/postulantes/buscar?q=${ciAsignar}`)
       const dataBuscar = await resBuscar.json()
 
       if (!dataBuscar.data || dataBuscar.data.length === 0) {
@@ -66,7 +66,7 @@ function DetalleGrupo() {
       }
 
       // Asignar al grupo
-      const resAsignar = await fetch('http://localhost:8000/api/grupos/asignar', {
+      const resAsignar = await fetch('https://cup-ficct-production.up.railway.app/api/grupos/asignar', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -93,7 +93,7 @@ function DetalleGrupo() {
   const handleRetirar = async (idPostulante) => {
     if (!window.confirm('¿Retirar este postulante del grupo?')) return
 
-    await fetch(`http://localhost:8000/api/grupos/${id}/retirar`, {
+    await fetch(`https://cup-ficct-production.up.railway.app/api/grupos/${id}/retirar`, {
       method: 'PUT',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ idpostulante: idPostulante })

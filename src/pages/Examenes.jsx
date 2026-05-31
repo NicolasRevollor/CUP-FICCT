@@ -26,7 +26,7 @@ function Examenes() {
   if (!usuario) return null
 
   const fetchMaterias = async () => {
-    const res = await fetch('http://localhost:8000/api/materias')
+    const res = await fetch('https://cup-ficct-production.up.railway.app/api/materias')
     const data = await res.json()
     setMaterias(data)
   }
@@ -39,7 +39,7 @@ function Examenes() {
     setLoading(true)
 
     try {
-      const res = await fetch(`http://localhost:8000/api/postulantes/buscar?q=${busquedaCI}`)
+      const res = await fetch(`https://cup-ficct-production.up.railway.app/api/postulantes/buscar?q=${busquedaCI}`)
       const data = await res.json()
       const p = data.data?.find(p => p.ci === busquedaCI)
 
@@ -58,7 +58,7 @@ function Examenes() {
   }
 
   const fetchExamenes = async (idPostulante) => {
-    const res = await fetch(`http://localhost:8000/api/examenes/${idPostulante}`)
+    const res = await fetch(`https://cup-ficct-production.up.railway.app/api/examenes/${idPostulante}`)
     const data = await res.json()
     setExamenes(data)
   }
@@ -70,7 +70,7 @@ function Examenes() {
 
     try {
       if (editando) {
-        const res = await fetch(`http://localhost:8000/api/examenes/${editando}`, {
+        const res = await fetch(`https://cup-ficct-production.up.railway.app/api/examenes/${editando}`, {
           method: 'PUT',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify(form)
@@ -85,7 +85,7 @@ function Examenes() {
           setError(data.message)
         }
       } else {
-        const res = await fetch('http://localhost:8000/api/examenes', {
+        const res = await fetch('https://cup-ficct-production.up.railway.app/api/examenes', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({

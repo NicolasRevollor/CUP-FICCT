@@ -27,19 +27,19 @@ function Reportes() {
   if (!usuario) return null
 
   const fetchDashboard = async () => {
-    const res = await fetch('http://localhost:8000/api/reportes/dashboard')
+    const res = await fetch('https://cup-ficct-production.up.railway.app/api/reportes/dashboard')
     const data = await res.json()
     setDashboard(data)
   }
 
   const fetchEstadisticas = async () => {
-    const res = await fetch('http://localhost:8000/api/reportes/estadisticas-materia')
+    const res = await fetch('https://cup-ficct-production.up.railway.app/api/reportes/estadisticas-materia')
     const data = await res.json()
     setEstadisticas(data)
   }
 
   const fetchGrupos = async () => {
-    const res = await fetch('http://localhost:8000/api/reportes/grupos-aprobados')
+    const res = await fetch('https://cup-ficct-production.up.railway.app/api/reportes/grupos-aprobados')
     const data = await res.json()
     setGrupos(data)
   }
@@ -47,10 +47,10 @@ function Reportes() {
   const fetchPostulantes = async (tipo) => {
     setLoading(true)
     const url = tipo === 'aprobados'
-      ? 'http://localhost:8000/api/reportes/aprobados'
+      ? 'https://cup-ficct-production.up.railway.app/api/reportes/aprobados'
       : tipo === 'reprobados'
-      ? 'http://localhost:8000/api/reportes/reprobados'
-      : 'http://localhost:8000/api/reportes/postulantes'
+      ? 'https://cup-ficct-production.up.railway.app/api/reportes/reprobados'
+      : 'https://cup-ficct-production.up.railway.app/api/reportes/postulantes'
     const res = await fetch(url)
     const data = await res.json()
     setPostulantes(data)
@@ -131,8 +131,8 @@ const exportarPDF = () => {
   const ejecutarAdmision = async () => {
   setLoadingAdmision(true)
   try {
-    await fetch('http://localhost:8000/api/reportes/admision', { method: 'POST' })
-    const res = await fetch('http://localhost:8000/api/reportes/admision')
+    await fetch('https://cup-ficct-production.up.railway.app/api/reportes/admision', { method: 'POST' })
+    const res = await fetch('https://cup-ficct-production.up.railway.app/api/reportes/admision')
     const data = await res.json()
     setReporteAdmision(data)
     setReporte('admision')
@@ -148,7 +148,7 @@ doc.save(`reporte_${reporte}_${new Date().toLocaleDateString()}.pdf`)
 const ejecutarAdmision = async () => {
   setLoadingAdmision(true)
   try {
-    const res = await fetch('http://localhost:8000/api/reportes/admision', { method: 'POST' })
+    const res = await fetch('https://cup-ficct-production.up.railway.app/api/reportes/admision', { method: 'POST' })
     const data = await res.json()
     setReporteAdmision(data)
   } catch (err) {

@@ -21,7 +21,7 @@ function Dashboard() {
 
   const fetchStats = async () => {
     try {
-      const res = await fetch('http://localhost:8000/api/reportes/dashboard')
+      const res = await fetch('https://cup-ficct-production.up.railway.app/api/reportes/dashboard')
       const data = await res.json()
       setStats(data)
     } catch (err) {

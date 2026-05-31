@@ -23,7 +23,7 @@ function EditarPostulante() {
   useEffect(() => {
     const fetchPostulante = async () => {
       try {
-        const res = await fetch(`http://localhost:8000/api/postulantes/${id}`)
+        const res = await fetch(`https://cup-ficct-production.up.railway.app/api/postulantes/${id}`)
         const data = await res.json()
         setForm({
           ci: data.ci,
@@ -59,7 +59,7 @@ function EditarPostulante() {
     setExito('')
 
     try {
-      const res = await fetch(`http://localhost:8000/api/postulantes/${id}`, {
+      const res = await fetch(`https://cup-ficct-production.up.railway.app/api/postulantes/${id}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(form)

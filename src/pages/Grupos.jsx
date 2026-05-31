@@ -18,7 +18,7 @@ function Grupos() {
   const fetchGrupos = async () => {
     setLoading(true)
     try {
-      const res = await fetch('http://localhost:8000/api/grupos')
+      const res = await fetch('https://cup-ficct-production.up.railway.app/api/grupos')
       const data = await res.json()
       setGrupos(data)
     } catch (err) {

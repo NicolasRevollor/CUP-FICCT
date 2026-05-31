@@ -36,7 +36,7 @@ function NuevoPostulante() {
     }
 
     try {
-      const res = await fetch('http://localhost:8000/api/postulantes', {
+      const res = await fetch('https://cup-ficct-production.up.railway.app/api/postulantes', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(form)

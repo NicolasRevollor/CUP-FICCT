@@ -22,7 +22,7 @@ function Login() {
       if (res.ok) {
         localStorage.setItem('token',   data.token)
         localStorage.setItem('usuario', JSON.stringify(data.usuario))
-        navigate(data.usuario.rol === 'DOCENTE' ? '/docente-dashboard' : '/dashboard')
+        navigate(data.usuario.rol === 'DOCENTE' ? '/docente-dashboard' : '/dashboard', { replace: true })
       } else {
         setError(data.message)
       }

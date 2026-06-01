@@ -85,7 +85,7 @@ export default function Landing() {
   const toggle = (id) => setCarreraAbierta(prev => prev === id ? null : id)
 
   return (
-    <div style={{ fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, sans-serif', overflowX: 'hidden' }}>
+    <div style={{ fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, sans-serif', overflowX: 'clip' }}>
 
       {/* ── NAVBAR ── */}
       <nav style={{ background: '#0d2451', padding: '0 32px', height: 64, display: 'flex', alignItems: 'center', position: 'sticky', top: 0, zIndex: 100, boxShadow: '0 2px 8px rgba(0,0,0,.4)' }}>
@@ -189,7 +189,7 @@ export default function Landing() {
             <h2 style={{ fontSize: 30, fontWeight: 800, color: '#0d2451', margin: 0 }}>Carreras FICCT</h2>
             <p style={{ color: '#6b7280', marginTop: 8, fontSize: 14 }}>Selecciona tu carrera y conoce más detalles</p>
           </div>
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2,1fr)', gap: 16 }}>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2,1fr)', gap: 16, alignItems: 'start' }}>
             {CARRERAS.map(c => (
               <div key={c.id} style={{ background: '#fff', borderRadius: 12, border: '1px solid #e5e7eb', overflow: 'hidden', boxShadow: '0 1px 4px rgba(0,0,0,.06)', cursor: 'pointer' }} onClick={() => toggle(c.id)}>
                 <div style={{ padding: '20px 24px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', borderLeft: `4px solid ${c.color}` }}>

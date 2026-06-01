@@ -201,14 +201,10 @@ export default function Landing() {
           ))}
 
           {/* Toggle idioma */}
-          <div style={{ display: 'flex', background: 'rgba(255,255,255,.1)', borderRadius: 6, overflow: 'hidden', border: '1px solid rgba(255,255,255,.15)' }}>
-            {['es','en'].map(l => (
-              <button key={l} onClick={() => setLang(l)}
-                style={{ padding: '5px 10px', background: lang === l ? 'rgba(255,255,255,.25)' : 'transparent', border: 'none', color: '#fff', fontSize: 12, fontWeight: lang === l ? 700 : 400, cursor: 'pointer', letterSpacing: '.05em' }}>
-                {l.toUpperCase()}
-              </button>
-            ))}
-          </div>
+          <button onClick={() => setLang(l => l === 'es' ? 'en' : 'es')}
+            style={{ background: 'rgba(255,255,255,.1)', border: '1px solid rgba(255,255,255,.15)', color: '#fff', padding: '5px 12px', borderRadius: 6, fontSize: 12, fontWeight: 700, cursor: 'pointer', letterSpacing: '.05em' }}>
+            {lang === 'es' ? 'EN' : 'ES'}
+          </button>
 
           {/* Toggle tema */}
           <button onClick={() => setDark(d => !d)}

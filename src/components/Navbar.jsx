@@ -1,32 +1,33 @@
 import { useNavigate } from 'react-router-dom'
+import { apiFetch } from '../api'
 
 function Navbar({ usuario }) {
   const navigate = useNavigate()
 
-  const handleLogout = () => {
+  const handleLogout = async () => {
+    try { await apiFetch('/api/logout', { method: 'POST' }) } catch {}
+    localStorage.removeItem('token')
     localStorage.removeItem('usuario')
     navigate('/')
   }
 
   return (
-    <nav className="navbar navbar-expand-lg text-white shadow"
-         style={{ backgroundColor: '#003087' }}>
-      <div className="container">
-        <span className="navbar-brand text-white fw-bold fs-4">
-          CUP - FICCT
-        </span>
+    <nav className="app-navbar">
+      <div className="nav-brand">
+        <div className="nav-brand-icon">FC</div>
+        <span className="nav-brand-text">CUP · FICCT</span>
+      </div>
 
-        <div className="d-flex align-items-center gap-3">
-          <span className="text-white">
-            👤 {usuario.nombre} | {usuario.rol}
-          </span>
-          <button
-            className="btn btn-outline-light btn-sm"
-            onClick={handleLogout}
-          >
-            Cerrar Sesión
-          </button>
+      <div className="nav-spacer" />
+
+      <div className="nav-user">
+        <div className="nav-user-info">
+          <div className="nav-user-name">{usuario.nombre}</div>
+          <div className="nav-user-role">{usuario.rol}</div>
         </div>
+        <button className="btn-nav-logout" onClick={handleLogout}>
+          Cerrar sesión
+        </button>
       </div>
     </nav>
   )

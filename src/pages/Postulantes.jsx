@@ -1,190 +1,139 @@
 import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import Navbar from '../components/Navbar'
+import { apiFetch } from '../api'
+
+const BADGE = { APROBADO: 'success', REPROBADO: 'danger', INSCRITO: 'info', PENDIENTE: 'warning' }
 
 function Postulantes() {
-  const navigate = useNavigate()
-  const usuario = JSON.parse(localStorage.getItem('usuario'))
-  const [postulantes, setPostulantes] = useState([])
-  const [currentPage, setCurrentPage] = useState(1)
-  const [totalPages, setTotalPages] = useState(1)
-  const [total, setTotal] = useState(0)
-  const [busqueda, setBusqueda] = useState('')
-  const [loading, setLoading] = useState(false)
+  const navigate    = useNavigate()
+  const usuario     = JSON.parse(localStorage.getItem('usuario'))
+  const [rows, setRows]             = useState([])
+  const [page, setPage]             = useState(1)
+  const [lastPage, setLastPage]     = useState(1)
+  const [total, setTotal]           = useState(0)
+  const [query, setQuery]           = useState('')
+  const [loading, setLoading]       = useState(false)
+  const [error, setError]           = useState('')
 
   if (!usuario) { navigate('/'); return null }
 
-  const fetchPostulantes = async (page = 1, query = '') => {
-    setLoading(true)
+  const load = async (p = 1, q = '') => {
+    setLoading(true); setError('')
     try {
-      const url = query
-        ? `https://cup-ficct-production.up.railway.app/api/postulantes/buscar?q=${query}&page=${page}`
-        : `https://cup-ficct-production.up.railway.app/api/postulantes?page=${page}`
-
-      const res = await fetch(url)
+      const path = q
+        ? `/api/postulantes/buscar?q=${encodeURIComponent(q)}&page=${p}`
+        : `/api/postulantes?page=${p}`
+      const res  = await apiFetch(path)
+      if (!res.ok) throw new Error('Error al cargar')
       const data = await res.json()
-      setPostulantes(data.data)
-      setTotalPages(data.last_page)
-      setTotal(data.total)
-      setCurrentPage(data.current_page)
-    } catch (err) {
-      console.error(err)
-    } finally {
-      setLoading(false)
-    }
+      setRows(data.data); setLastPage(data.last_page); setTotal(data.total); setPage(data.current_page)
+    } catch (e) { setError(e.message) } finally { setLoading(false) }
   }
 
-  useEffect(() => {
-    fetchPostulantes()
-  }, [])
+  useEffect(() => { load() }, [])
 
-  const handleBuscar = (e) => {
-    e.preventDefault()
-    fetchPostulantes(1, busqueda)
-  }
+  const handleSearch = (e) => { e.preventDefault(); load(1, query) }
+  const handleClear  = () => { setQuery(''); load(1, '') }
 
-  const handleEliminar = async (id) => {
-    if (!window.confirm('¿Está seguro de eliminar este postulante?')) return
-    await fetch(`https://cup-ficct-production.up.railway.app/api/postulantes/${id}`, { method: 'DELETE' })
-    fetchPostulantes(currentPage, busqueda)
-  }
-
-  const getBadge = (estado) => {
-    const badges = {
-      'APROBADO':  'success',
-      'REPROBADO': 'danger',
-      'INSCRITO':  'primary',
-      'PENDIENTE': 'warning'
-    }
-    return badges[estado] || 'secondary'
+  const handleDelete = async (id) => {
+    if (!window.confirm('¿Eliminar este postulante?')) return
+    try {
+      const res = await apiFetch(`/api/postulantes/${id}`, { method: 'DELETE' })
+      if (!res.ok) { const d = await res.json(); setError(d.message); return }
+      load(page, query)
+    } catch { setError('Error de conexión') }
   }
 
   return (
-    <div>
+    <div className="page">
       <Navbar usuario={usuario} />
-      <div className="container mt-4">
+      <div className="page-content">
 
-        {/* Header */}
-        <div className="d-flex justify-content-between align-items-center mb-4">
+        <div className="page-header">
           <div>
-            <h4 className="fw-bold" style={{ color: '#003087' }}>
-              <i className="bi bi-person-lines-fill me-2"></i>
-              Gestión de Postulantes
-            </h4>
-            <p className="text-muted mb-0">Total: {total} postulantes registrados</p>
+            <div className="page-title">Postulantes</div>
+            <div className="page-subtitle">{total} registros en total</div>
           </div>
-          <button
-            className="btn text-white"
-            style={{ backgroundColor: '#003087' }}
-            onClick={() => navigate('/postulantes/nuevo')}
-          >
-            <i className="bi bi-plus-circle me-2"></i>
-            Nuevo Postulante
+          <button className="btn btn-primary" onClick={() => navigate('/postulantes/nuevo')}>
+            <i className="bi bi-plus"></i> Nuevo Postulante
           </button>
         </div>
 
-        {/* Buscador */}
-        <form onSubmit={handleBuscar} className="mb-4">
-          <div className="input-group">
-            <input
-              type="text"
-              className="form-control"
-              placeholder="Buscar por CI, nombre o apellido..."
-              value={busqueda}
-              onChange={(e) => setBusqueda(e.target.value)}
-            />
-            <button className="btn text-white" style={{ backgroundColor: '#003087' }} type="submit">
-              <i className="bi bi-search me-1"></i> Buscar
-            </button>
-            <button className="btn btn-outline-secondary" type="button"
-              onClick={() => { setBusqueda(''); fetchPostulantes(1, '') }}>
-              <i className="bi bi-x-circle me-1"></i> Limpiar
-            </button>
-          </div>
+        {error && <div className="alert alert-danger"><i className="bi bi-exclamation-circle"></i>{error}</div>}
+
+        <form className="search-bar" onSubmit={handleSearch}>
+          <input className="form-input" placeholder="Buscar por CI, nombre o apellido..."
+            value={query} onChange={(e) => setQuery(e.target.value)} />
+          <button className="btn btn-primary" type="submit">
+            <i className="bi bi-search"></i> Buscar
+          </button>
+          <button className="btn btn-outline" type="button" onClick={handleClear}>
+            <i className="bi bi-x"></i> Limpiar
+          </button>
         </form>
 
-        {/* Tabla */}
-        <div className="card shadow">
-          <div className="card-body p-0">
-            {loading ? (
-              <div className="text-center p-5">
-                <div className="spinner-border" style={{ color: '#003087' }}></div>
-                <p className="mt-2">Cargando...</p>
-              </div>
-            ) : (
-              <div className="table-responsive">
-                <table className="table table-hover mb-0">
-                  <thead style={{ backgroundColor: '#003087', color: 'white' }}>
-                    <tr>
-                      <th>#</th>
-                      <th>CI</th>
-                      <th>Nombres</th>
-                      <th>Apellidos</th>
-                      <th>Promedio</th>
-                      <th>Estado</th>
-                      <th>Acciones</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {postulantes.map((p) => (
-                      <tr key={p.idpostulante}>
-                        <td>{p.idpostulante}</td>
-                        <td>{p.ci}</td>
-                        <td>{p.nombres}</td>
-                        <td>{p.apellidos}</td>
-                        <td>{p.promedio_final}</td>
-                        <td>
-                          <span className={`badge rounded-pill bg-${getBadge(p.estadopostulante)} px-3 py-2`}>
-                            {p.estadopostulante === 'APROBADO'  && <><i className="bi bi-check-circle-fill me-1"></i>Aprobado</>}
-                            {p.estadopostulante === 'REPROBADO' && <><i className="bi bi-x-circle-fill me-1"></i>Reprobado</>}
-                            {p.estadopostulante === 'INSCRITO'  && <><i className="bi bi-person-check-fill me-1"></i>Inscrito</>}
-                            {p.estadopostulante === 'PENDIENTE' && <><i className="bi bi-clock-fill me-1"></i>Pendiente</>}
-                          </span>
-                        </td>
-                        <td>
-                          <button
-                            className="btn btn-sm btn-outline-primary me-1"
-                            onClick={() => navigate(`/postulantes/editar/${p.idpostulante}`)}
-                          >
+        <div className="card">
+          {loading ? (
+            <div className="spinner-box">
+              <span className="spinner"></span>
+              <span className="spinner-text">Cargando postulantes...</span>
+            </div>
+          ) : rows.length === 0 ? (
+            <div className="empty-state">
+              <div className="empty-state-icon"><i className="bi bi-inbox"></i></div>
+              <div className="empty-state-text">No se encontraron postulantes</div>
+            </div>
+          ) : (
+            <div className="table-wrap">
+              <table className="data-table">
+                <thead>
+                  <tr>
+                    <th>#</th><th>CI</th><th>Nombres</th><th>Apellidos</th>
+                    <th>Promedio</th><th>Estado</th><th>Acciones</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {rows.map((p) => (
+                    <tr key={p.idpostulante}>
+                      <td className="td-muted">{p.idpostulante}</td>
+                      <td className="td-bold">{p.ci}</td>
+                      <td>{p.nombres}</td>
+                      <td>{p.apellidos}</td>
+                      <td>{p.promedio_final ?? '—'}</td>
+                      <td>
+                        <span className={`badge badge-${BADGE[p.estadopostulante] || 'neutral'}`}>
+                          {p.estadopostulante}
+                        </span>
+                      </td>
+                      <td>
+                        <div style={{ display: 'flex', gap: 6 }}>
+                          <button className="btn btn-sm btn-outline-info"
+                            onClick={() => navigate(`/postulantes/editar/${p.idpostulante}`)}>
                             <i className="bi bi-pencil"></i>
                           </button>
-                          <button
-                            className="btn btn-sm btn-outline-danger"
-                            onClick={() => handleEliminar(p.idpostulante)}
-                          >
+                          <button className="btn btn-sm btn-outline-danger"
+                            onClick={() => handleDelete(p.idpostulante)}>
                             <i className="bi bi-trash"></i>
                           </button>
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            )}
-          </div>
+                        </div>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
         </div>
 
-        {/* Paginación */}
-        <div className="d-flex justify-content-between align-items-center mt-3">
-          <small className="text-muted">
-            Página {currentPage} de {totalPages}
-          </small>
-          <nav>
-            <ul className="pagination pagination-sm mb-0">
-              <li className={`page-item ${currentPage === 1 ? 'disabled' : ''}`}>
-                <button className="page-link"
-                  onClick={() => fetchPostulantes(currentPage - 1, busqueda)}>
-                  Anterior
-                </button>
-              </li>
-              <li className={`page-item ${currentPage === totalPages ? 'disabled' : ''}`}>
-                <button className="page-link"
-                  onClick={() => fetchPostulantes(currentPage + 1, busqueda)}>
-                  Siguiente
-                </button>
-              </li>
-            </ul>
-          </nav>
+        <div className="pagination-row">
+          <span>Página {page} de {lastPage}</span>
+          <div className="pagination-btns">
+            <button className="page-btn" disabled={page === 1}
+              onClick={() => load(page - 1, query)}>Anterior</button>
+            <button className="page-btn" disabled={page === lastPage}
+              onClick={() => load(page + 1, query)}>Siguiente</button>
+          </div>
         </div>
 
       </div>

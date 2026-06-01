@@ -51,9 +51,14 @@ function Postulantes() {
       <div className="page-content">
 
         <div className="page-header">
-          <div>
-            <div className="page-title">Postulantes</div>
-            <div className="page-subtitle">{total} registros en total</div>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+            <button className="btn btn-outline" onClick={() => navigate('/dashboard')}>
+              <i className="bi bi-arrow-left"></i> Volver
+            </button>
+            <div>
+              <div className="page-title">Postulantes</div>
+              <div className="page-subtitle">{total} registros en total</div>
+            </div>
           </div>
           <button className="btn btn-primary" onClick={() => navigate('/postulantes/nuevo')}>
             <i className="bi bi-plus"></i> Nuevo Postulante

@@ -5,10 +5,10 @@ namespace App\Http\Controllers;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
+use App\Models\Usuario;
 
 class AuthController extends Controller
 {
-    // Login
     public function login(Request $request)
     {
         $request->validate([
@@ -16,48 +16,65 @@ class AuthController extends Controller
             'Password'       => 'required',
         ]);
 
-        // Buscar usuario en la BD
         $usuario = DB::table('usuario')
             ->where('nombre_usuario', $request->Nombre_Usuario)
             ->first();
 
-        // Verificar si existe y la contraseña es correcta
-        if (!$usuario || md5($request->Password) !== $usuario->password) {
-            return response()->json([
-                'message' => 'Usuario o contraseña incorrectos'
-            ], 401);
+        if (!$usuario) {
+            return response()->json(['message' => 'Usuario o contraseña incorrectos'], 401);
         }
 
-        // Verificar que esté activo
+        // Verificar contraseña: soporta bcrypt (nuevo) y md5 (legado, migra automáticamente)
+        $passwordValida = false;
+        try {
+            if (Hash::check($request->Password, $usuario->password)) {
+                $passwordValida = true;
+            }
+        } catch (\RuntimeException $e) {
+            // Hash no es bcrypt — verificar MD5 abajo
+        }
+
+        if (!$passwordValida && md5($request->Password) === $usuario->password) {
+            // Migrar contraseña MD5 → bcrypt
+            DB::table('usuario')
+                ->where('idusuario', $usuario->idusuario)
+                ->update(['password' => Hash::make($request->Password)]);
+            $passwordValida = true;
+        }
+
+        if (!$passwordValida) {
+            return response()->json(['message' => 'Usuario o contraseña incorrectos'], 401);
+        }
+
         if ($usuario->estado !== 'ACTIVO') {
-            return response()->json([
-                'message' => 'Usuario inactivo o bloqueado'
-            ], 403);
+            return response()->json(['message' => 'Usuario inactivo o bloqueado'], 403);
         }
 
-        // Obtener rol del usuario
         $rol = DB::table('usuario_roles')
             ->join('roles', 'roles.idrol', '=', 'usuario_roles.idrol')
             ->where('usuario_roles.idusuario', $usuario->idusuario)
             ->select('roles.nombre')
             ->first();
 
+        // Crear token Sanctum
+        $usuarioModel = Usuario::find($usuario->idusuario);
+        $token = $usuarioModel->createToken('api-token')->plainTextToken;
+
         return response()->json([
             'message' => 'Login exitoso',
+            'token'   => $token,
             'usuario' => [
-                'id'       => $usuario->idusuario,
-                'nombre'   => $usuario->nombre_usuario,
-                'email'    => $usuario->email,
-                'rol'      => $rol ? $rol->nombre : 'SIN ROL',
-            ]
+                'id'     => $usuario->idusuario,
+                'nombre' => $usuario->nombre_usuario,
+                'email'  => $usuario->email,
+                'rol'    => $rol ? $rol->nombre : 'SIN ROL',
+            ],
         ], 200);
     }
 
-    // Logout
     public function logout(Request $request)
     {
-        return response()->json([
-            'message' => 'Sesión cerrada correctamente'
-        ], 200);
+        $request->user()->currentAccessToken()->delete();
+        return response()->json(['message' => 'Sesión cerrada correctamente'], 200);
     }
 }

@@ -7,7 +7,6 @@ use Illuminate\Support\Facades\DB;
 
 class GrupoController extends Controller
 {
-    // Listar todos los grupos con sus horarios
     public function index()
     {
         $grupos = DB::table('grupos as g')
@@ -31,8 +30,7 @@ class GrupoController extends Controller
         return response()->json($grupos);
     }
 
-    // Listar postulantes de un grupo
-    public function postulantes($id)
+    public function postulantes(int $id)
     {
         $postulantes = DB::table('grupopostulantes as gp')
             ->join('postulante as p', 'p.idpostulante', '=', 'gp.idpostulante')
@@ -53,15 +51,13 @@ class GrupoController extends Controller
         return response()->json($postulantes);
     }
 
-    // Asignar postulante a grupo
     public function asignar(Request $request)
     {
         $request->validate([
-            'idpostulante' => 'required',
-            'idgrupo'      => 'required',
+            'idpostulante' => 'required|integer',
+            'idgrupo'      => 'required|integer',
         ]);
 
-        // Verificar que el postulante existe
         $postulante = DB::table('postulante')
             ->where('idpostulante', $request->idpostulante)
             ->first();
@@ -70,43 +66,66 @@ class GrupoController extends Controller
             return response()->json(['message' => 'Postulante no encontrado'], 404);
         }
 
-        // Verificar que no esté ya asignado a este grupo
         $existe = DB::table('grupopostulantes')
             ->where('idpostulante', $request->idpostulante)
             ->where('idgrupo', $request->idgrupo)
-            ->first();
+            ->where('estado', 'ACTIVO')
+            ->exists();
 
         if ($existe) {
             return response()->json(['message' => 'El postulante ya está asignado a este grupo'], 400);
         }
 
-        // Verificar capacidad del grupo
-        $grupo = DB::table('grupos')
-            ->where('idgrupo', $request->idgrupo)
-            ->first();
+        DB::transaction(function () use ($request) {
+            $grupo = DB::table('grupos')
+                ->where('idgrupo', $request->idgrupo)
+                ->lockForUpdate()
+                ->first();
 
-        if ($grupo->cantidadestudiante >= $grupo->capacidadmaxima) {
-            return response()->json(['message' => 'El grupo ya alcanzó su capacidad máxima'], 400);
-        }
+            if (!$grupo) {
+                throw new \Exception('Grupo no encontrado');
+            }
 
-        // Asignar postulante al grupo
-        DB::table('grupopostulantes')->insert([
-            'idpostulante'   => $request->idpostulante,
-            'idgrupo'        => $request->idgrupo,
-            'fechaasignacion'=> now(),
-            'estado'         => 'ACTIVO',
-        ]);
+            if ($grupo->cantidadestudiante >= $grupo->capacidadmaxima) {
+                throw new \Exception('El grupo ya alcanzó su capacidad máxima');
+            }
+
+            DB::table('grupopostulantes')->insert([
+                'idpostulante'    => $request->idpostulante,
+                'idgrupo'         => $request->idgrupo,
+                'fechaasignacion' => now(),
+                'estado'          => 'ACTIVO',
+            ]);
+            // TRIGGER 4 (AFTER INSERT en grupopostulantes) incrementa cantidadestudiante automáticamente
+        });
 
         return response()->json(['message' => 'Postulante asignado correctamente'], 201);
     }
 
-    // Retirar postulante de un grupo
-    public function retirar(Request $request, $id)
+    public function retirar(Request $request, int $id)
     {
-        DB::table('grupopostulantes')
+        $asignacion = DB::table('grupopostulantes')
             ->where('idpostulante', $request->idpostulante)
             ->where('idgrupo', $id)
-            ->update(['estado' => 'RETIRADO']);
+            ->where('estado', 'ACTIVO')
+            ->first();
+
+        if (!$asignacion) {
+            return response()->json(['message' => 'El postulante no está asignado a este grupo'], 404);
+        }
+
+        DB::transaction(function () use ($request, $id) {
+            // Soft delete: UPDATE en lugar de DELETE → trigger 4 no se activa (escucha DELETE)
+            // Por eso decrementamos manualmente
+            DB::table('grupopostulantes')
+                ->where('idpostulante', $request->idpostulante)
+                ->where('idgrupo', $id)
+                ->update(['estado' => 'RETIRADO']);
+
+            DB::table('grupos')
+                ->where('idgrupo', $id)
+                ->decrement('cantidadestudiante');
+        });
 
         return response()->json(['message' => 'Postulante retirado del grupo']);
     }

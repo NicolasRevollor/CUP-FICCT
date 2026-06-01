@@ -88,6 +88,12 @@ function Login() {
       {/* ── Panel derecho ── */}
       <div className="login-right">
         <div className="login-box">
+          <button
+            onClick={() => navigate('/')}
+            style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#6b7280', fontSize: 13, display: 'flex', alignItems: 'center', gap: 6, padding: 0, marginBottom: 20 }}
+          >
+            <i className="bi bi-arrow-left"></i> Volver al inicio
+          </button>
           <h2 className="login-heading">Bienvenido</h2>
           <p className="login-subheading">
             Ingresa tus credenciales para acceder al sistema

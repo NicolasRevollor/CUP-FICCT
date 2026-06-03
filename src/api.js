@@ -7,6 +7,7 @@ const apiFetch = async (path, options = {}) => {
     ...rest,
     headers: {
       'Content-Type': 'application/json',
+      'Accept': 'application/json',
       ...(token ? { Authorization: `Bearer ${token}` } : {}),
       ...headers,
     },

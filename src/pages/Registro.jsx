@@ -5,7 +5,8 @@ import { Elements, CardElement, useStripe, useElements } from '@stripe/react-str
 import { apiFetch } from '../api'
 
 const stripePromise = loadStripe(import.meta.env.VITE_STRIPE_PUBLISHABLE_KEY || 'pk_test_placeholder')
-const MONTO_USD = Number(import.meta.env.VITE_INSCRIPCION_MONTO || 10)
+const MONTO_BS  = Number(import.meta.env.VITE_INSCRIPCION_MONTO || 120)
+const MONTO_USD = Math.round(MONTO_BS / 6.9 * 100) / 100
 
 const CARD_STYLE = {
   style: {
@@ -85,7 +86,7 @@ function PagoForm({ datos, onSuccess, onBack }) {
         <div style={{ fontSize: 13, fontWeight: 500, color: '#111827', marginBottom: 6 }}>
           Monto a pagar
         </div>
-        <div style={{ fontSize: 24, fontWeight: 800, color: '#0d2451' }}>${MONTO_USD} USD</div>
+        <div style={{ fontSize: 24, fontWeight: 800, color: '#0d2451' }}>Bs. {MONTO_BS}</div>
         <div style={{ fontSize: 11, color: '#9ca3af', marginTop: 2 }}>Pago de inscripción al CUP-FICCT 2026</div>
       </div>
 
@@ -111,7 +112,7 @@ function PagoForm({ datos, onSuccess, onBack }) {
           {loading ? (
             <><span className="spinner" style={{ width: 15, height: 15, borderWidth: 2, marginBottom: 0 }}></span> Procesando...</>
           ) : (
-            <><i className="bi bi-lock-fill"></i> Pagar ${MONTO_USD} USD e Inscribirme</>
+            <><i className="bi bi-lock-fill"></i> Pagar Bs. {MONTO_BS} e Inscribirme</>
           )}
         </button>
       </div>
@@ -172,7 +173,7 @@ export default function Registro() {
             <div style={{ fontSize: 20, fontWeight: 800, color: '#0d2451' }}>{completado.ci}</div>
             <div style={{ fontSize: 12, color: '#9ca3af', marginTop: 4 }}>Guarda este dato para hacer seguimiento de tu proceso</div>
           </div>
-          <button className="btn btn-primary btn-full" onClick={() => navigate('/')} style={{ background: '#0d2451', borderColor: '#0d2451' }}>
+            <button className="btn btn-primary btn-full" onClick={() => navigate('/')} style={{ background: '#0d2451', borderColor: '#0d2451' }}>
             <i className="bi bi-house"></i> Volver al inicio
           </button>
         </div>

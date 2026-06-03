@@ -4,6 +4,8 @@ namespace App\Http\Controllers;
 
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Mail;
+use App\Mail\RegistroConfirmacion;
 use Stripe\StripeClient;
 
 class RegistroController extends Controller
@@ -80,6 +82,19 @@ class RegistroController extends Controller
                 'estadopago'       => 'CONFIRMADO',
             ]);
         });
+
+        // Enviar correo de confirmación
+        try {
+            Mail::to($request->correo)->send(new RegistroConfirmacion(
+                nombres:   $request->nombres,
+                apellidos: $request->apellidos,
+                ci:        $request->ci,
+                correo:    $request->correo,
+                monto:     $request->monto,
+            ));
+        } catch (\Exception $e) {
+            // No fallar el registro si el correo falla
+        }
 
         return response()->json([
             'message'  => 'Registro completado correctamente',

@@ -77,7 +77,7 @@ class RegistroController extends Controller
                 'idpostulante'     => $idPostulante,
                 'monto'            => $request->monto,
                 'fechapago'        => now(),
-                'metodopago'       => $request->metodoPago,
+                'metodopago'       => 'TRANSFERENCIA',
                 'codgotransaccion' => $request->paymentIntentId,
                 'estadopago'       => 'CONFIRMADO',
             ]);
@@ -92,7 +92,7 @@ class RegistroController extends Controller
                 correo:    $request->correo,
                 monto:     $request->monto,
             ));
-        } catch (\Exception $e) {
+        } catch (\Throwable $e) {
             // No fallar el registro si el correo falla
         }
 

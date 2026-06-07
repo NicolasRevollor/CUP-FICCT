@@ -152,6 +152,34 @@ class AuthController extends Controller
         return response()->json(['message' => 'Si el correo está registrado recibirás una contraseña temporal en breve.'], 200);
     }
 
+    public function cambiarPassword(Request $request)
+    {
+        $request->validate([
+            'password_actual'  => 'required',
+            'password_nuevo'   => 'required|min:6',
+            'password_confirm' => 'required|same:password_nuevo',
+        ]);
+
+        $usuario = DB::table('usuario')->where('idusuario', $request->user()->idusuario)->first();
+
+        $valida = false;
+        try {
+            if (Hash::check($request->password_actual, $usuario->password)) $valida = true;
+        } catch (\RuntimeException) {}
+
+        if (!$valida && md5($request->password_actual) === $usuario->password) $valida = true;
+
+        if (!$valida) {
+            return response()->json(['message' => 'La contraseña actual es incorrecta'], 400);
+        }
+
+        DB::table('usuario')->where('idusuario', $usuario->idusuario)->update([
+            'password' => Hash::make($request->password_nuevo),
+        ]);
+
+        return response()->json(['message' => 'Contraseña actualizada correctamente']);
+    }
+
     public function logout(Request $request)
     {
         $request->user()->currentAccessToken()->delete();

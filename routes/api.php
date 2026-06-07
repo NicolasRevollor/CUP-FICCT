@@ -21,7 +21,8 @@ Route::post('/registro',                 [RegistroController::class,'registrar']
 // ── Rutas protegidas ─────────────────────────────────────────
 Route::middleware('auth:sanctum')->group(function () {
 
-    Route::post('/logout', [AuthController::class, 'logout']);
+    Route::post('/logout',           [AuthController::class, 'logout']);
+    Route::post('/cambiar-password', [AuthController::class, 'cambiarPassword']);
 
     // Postulantes
     Route::get('/postulantes',         [PostulanteController::class, 'index']);

@@ -13,6 +13,7 @@ const TABS = [
   { key: 'todos',     label: 'Todos',        icon: 'bi-people' },
   { key: 'aprobados', label: 'Aprobados',    icon: 'bi-check-circle' },
   { key: 'reprobados',label: 'Reprobados',   icon: 'bi-x-circle' },
+  { key: 'notas',     label: 'Notas',        icon: 'bi-journal-text' },
   { key: 'grupos',    label: 'Grupos',       icon: 'bi-collection' },
   { key: 'admision',  label: 'Admisión',     icon: 'bi-mortarboard' },
 ]
@@ -26,14 +27,18 @@ function Reportes() {
   const [grupos, setGrupos]             = useState([])
   const [postulantes, setPostulantes]   = useState([])
   const [reporteAdmision, setAdmision]  = useState([])
-  const [loading, setLoading]           = useState(false)
-  const [loadingAdm, setLoadingAdm]     = useState(false)
+  const [loading, setLoading]                   = useState(false)
+  const [loadingAdm, setLoadingAdm]             = useState(false)
+  const [materias, setMaterias]                 = useState([])
+  const [materiaSeleccionada, setMateriaSel]    = useState('')
+  const [notasMateria, setNotasMateria]         = useState([])
 
   useEffect(() => {
     if (!usuario) { navigate('/'); return }
     apiFetch('/api/reportes/dashboard').then(r => r.ok ? r.json() : null).then(d => { if (d) setDashboard(d) }).catch(() => {})
     apiFetch('/api/reportes/estadisticas-materia').then(r => r.ok ? r.json() : []).then(setEstadisticas).catch(() => {})
     apiFetch('/api/reportes/grupos-aprobados').then(r => r.ok ? r.json() : []).then(setGrupos).catch(() => {})
+    apiFetch('/api/materias').then(r => r.ok ? r.json() : []).then(setMaterias).catch(() => {})
   }, [])
 
   if (!usuario) return null
@@ -44,9 +49,34 @@ function Reportes() {
     apiFetch(paths[tipo]).then(r => r.ok ? r.json() : []).then(setPostulantes).catch(() => {}).finally(() => setLoading(false))
   }
 
+  const loadNotasMateria = (idMateria) => {
+    if (!idMateria) { setNotasMateria([]); return }
+    setLoading(true)
+    apiFetch(`/api/examenes/materia/${idMateria}`).then(r => r.ok ? r.json() : []).then(setNotasMateria).catch(() => {}).finally(() => setLoading(false))
+  }
+
+  const exportarPDFNotas = () => {
+    if (!notasMateria.length) return
+    const mat = materias.find(m => String(m.idmateria) === String(materiaSeleccionada))
+    const doc = new jsPDF()
+    doc.setFontSize(18); doc.setTextColor(17,24,39); doc.text('CUP · FICCT', 14, 20)
+    doc.setFontSize(11); doc.setTextColor(100); doc.text(`Notas — ${mat?.nombre || 'Materia'}`, 14, 30)
+    doc.setFontSize(9); doc.text(`Fecha: ${new Date().toLocaleDateString()} · Total: ${notasMateria.length}`, 14, 38)
+    autoTable(doc, {
+      startY: 44,
+      head: [['CI','Nombres','Apellidos','Ex. 1','Ex. 2','Ex. 3','Nota Final','Estado']],
+      body: notasMateria.map(n => [n.ci, n.nombres, n.apellidos, n.nota1, n.nota2, n.nota3, n.promedio, n.estado]),
+      headStyles: { fillColor: [17,24,39] },
+      alternateRowStyles: { fillColor: [249,250,251] },
+      styles: { fontSize: 8.5 },
+    })
+    doc.save(`notas_${mat?.nombre || 'materia'}_${new Date().toLocaleDateString()}.pdf`)
+  }
+
   const handleTab = (key) => {
     setTab(key)
     if (['todos','aprobados','reprobados'].includes(key)) loadPostulantes(key)
+    if (key !== 'notas') { setMateriaSel(''); setNotasMateria([]) }
   }
 
   const ejecutarAdmision = async () => {
@@ -241,6 +271,61 @@ function Reportes() {
                     <div style={{ fontSize: 11, color: 'var(--text-muted)' }}>{c.disponibles} disponibles</div>
                   </div>
                 ))}
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* ── Notas por Materia ── */}
+        {tab === 'notas' && (
+          <div className="card">
+            <div className="card-header">
+              <i className="bi bi-journal-text"></i> Notas por Materia
+              <span style={{ marginLeft: 6, background: 'var(--bg)', borderRadius: 20, padding: '1px 9px', fontSize: 11, color: 'var(--text-muted)' }}>
+                {notasMateria.length}
+              </span>
+              <div className="card-header-actions">
+                <select className="form-select" style={{ width: 'auto', padding: '4px 10px', fontSize: 13 }}
+                  value={materiaSeleccionada}
+                  onChange={e => { setMateriaSel(e.target.value); loadNotasMateria(e.target.value) }}>
+                  <option value="">Seleccione una materia</option>
+                  {materias.map(m => <option key={m.idmateria} value={m.idmateria}>{m.nombre}</option>)}
+                </select>
+                <button className="btn btn-sm btn-outline-danger" onClick={exportarPDFNotas} disabled={!notasMateria.length}>
+                  <i className="bi bi-file-earmark-pdf"></i> PDF
+                </button>
+              </div>
+            </div>
+            {loading ? (
+              <div className="spinner-box"><span className="spinner"></span></div>
+            ) : notasMateria.length === 0 ? (
+              <div className="empty-state">
+                <div className="empty-state-icon"><i className="bi bi-inbox"></i></div>
+                <div className="empty-state-text">
+                  {materiaSeleccionada ? 'No hay notas registradas para esta materia' : 'Seleccione una materia para ver las notas'}
+                </div>
+              </div>
+            ) : (
+              <div className="table-wrap">
+                <table className="data-table">
+                  <thead>
+                    <tr><th>CI</th><th>Nombres</th><th>Apellidos</th><th>Ex. 1 (30%)</th><th>Ex. 2 (30%)</th><th>Ex. 3 (40%)</th><th>Nota Final</th><th>Estado</th></tr>
+                  </thead>
+                  <tbody>
+                    {notasMateria.map((n, i) => (
+                      <tr key={i}>
+                        <td className="td-bold">{n.ci}</td>
+                        <td>{n.nombres}</td>
+                        <td>{n.apellidos}</td>
+                        <td>{n.nota1}</td>
+                        <td>{n.nota2}</td>
+                        <td>{n.nota3}</td>
+                        <td><strong>{n.promedio}</strong></td>
+                        <td><span className={`badge badge-${BADGE[n.estado] || 'neutral'}`}>{n.estado}</span></td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
               </div>
             )}
           </div>

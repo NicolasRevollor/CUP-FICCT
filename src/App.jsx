@@ -14,6 +14,7 @@ import Reportes          from './pages/Reportes'
 import Docentes          from './pages/Docentes'
 import Pagos             from './pages/Pagos'
 import Inscripciones     from './pages/Inscripciones'
+import RecuperarPassword from './pages/RecuperarPassword'
 
 function App() {
   return (
@@ -34,6 +35,7 @@ function App() {
         <Route path="/docentes"               element={<Docentes />} />
         <Route path="/pagos"                  element={<Pagos />} />
         <Route path="/inscripciones"          element={<Inscripciones />} />
+        <Route path="/recuperar-password"     element={<RecuperarPassword />} />
       </Routes>
     </BrowserRouter>
   )

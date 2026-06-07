@@ -71,7 +71,7 @@ class RegistroController extends Controller
                     'otrosrequisitos'    => $request->otrosRequisitos,
                     'estadopostulante'   => 'PENDIENTE',
                     'promedio_final'     => 0,
-                ]);
+                ], 'idpostulante');
 
                 // Registrar pago confirmado
                 DB::table('pagos')->insert([

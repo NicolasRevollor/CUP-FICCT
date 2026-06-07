@@ -296,9 +296,9 @@ export default function DocenteDashboard() {
                                 <td>{ex ? ex.nota3 : <span style={{ color: '#d1d5db' }}>—</span>}</td>
                                 <td><strong>{ex ? ex.promedio : '—'}</strong></td>
                                 <td>
-                                  <span className={`badge badge-${ex ? (BADGE[ex.estado] || 'neutral') : 'neutral'}`}>
-                                    {ex ? ex.estado : 'PENDIENTE'}
-                                  </span>
+                                  {ex
+                                    ? <span className={`badge badge-${BADGE[ex.estado] || 'neutral'}`}>{ex.estado}</span>
+                                    : <span style={{ color: '#d1d5db' }}>—</span>}
                                 </td>
                                 <td>
                                   <button

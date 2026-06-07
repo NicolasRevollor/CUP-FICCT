@@ -36,11 +36,11 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::post('/grupos/asignar',         [GrupoController::class, 'asignar']);
     Route::put('/grupos/{id}/retirar',     [GrupoController::class, 'retirar']);
 
-    // Exámenes
+    // Exámenes (ruta específica primero para evitar que {idPostulante} capture "materia")
+    Route::get('/examenes/materia/{idMateria}', [ExamenController::class, 'reporteMateria']);
     Route::get('/examenes/{idPostulante}',      [ExamenController::class, 'index']);
     Route::post('/examenes',                    [ExamenController::class, 'store']);
     Route::put('/examenes/{id}',                [ExamenController::class, 'update']);
-    Route::get('/examenes/materia/{idMateria}', [ExamenController::class, 'reporteMateria']);
 
     // Materias
     Route::get('/materias', [MateriaController::class, 'index']);

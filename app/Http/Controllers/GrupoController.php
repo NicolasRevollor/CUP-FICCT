@@ -102,6 +102,20 @@ class GrupoController extends Controller
         return response()->json(['message' => 'Postulante asignado correctamente'], 201);
     }
 
+    public function examenesGrupo(int $idGrupo, int $idMateria)
+    {
+        $examenes = DB::table('examen as e')
+            ->join('grupopostulantes as gp', 'gp.idpostulante', '=', 'e.idpostulante')
+            ->where('gp.idgrupo', $idGrupo)
+            ->where('gp.estado', 'ACTIVO')
+            ->where('e.idmateria', $idMateria)
+            ->select('e.idpostulante', 'e.idexamen', 'e.nota1', 'e.nota2', 'e.nota3', 'e.promedio', 'e.estado')
+            ->get()
+            ->keyBy('idpostulante');
+
+        return response()->json($examenes);
+    }
+
     public function retirar(Request $request, int $id)
     {
         $asignacion = DB::table('grupopostulantes')

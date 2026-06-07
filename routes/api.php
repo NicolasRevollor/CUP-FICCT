@@ -32,9 +32,10 @@ Route::middleware('auth:sanctum')->group(function () {
 
     // Grupos
     Route::get('/grupos',                  [GrupoController::class, 'index']);
-    Route::get('/grupos/{id}/postulantes', [GrupoController::class, 'postulantes']);
-    Route::post('/grupos/asignar',         [GrupoController::class, 'asignar']);
-    Route::put('/grupos/{id}/retirar',     [GrupoController::class, 'retirar']);
+    Route::get('/grupos/{id}/postulantes',                    [GrupoController::class, 'postulantes']);
+    Route::get('/grupos/{idGrupo}/examenes/{idMateria}',      [GrupoController::class, 'examenesGrupo']);
+    Route::post('/grupos/asignar',                            [GrupoController::class, 'asignar']);
+    Route::put('/grupos/{id}/retirar',                        [GrupoController::class, 'retirar']);
 
     // Exámenes (ruta específica primero para evitar que {idPostulante} capture "materia")
     Route::get('/examenes/materia/{idMateria}', [ExamenController::class, 'reporteMateria']);

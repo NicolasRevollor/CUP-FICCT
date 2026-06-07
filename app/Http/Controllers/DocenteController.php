@@ -64,7 +64,7 @@ class DocenteController extends Controller
             return response()->json(['message' => 'No tienes perfil de docente'], 403);
         }
 
-        $grupos = DB::table('docentegruposmateria as dgm')
+        $grupos = DB::table('docentegrupomateria as dgm')
             ->join('grupos as g',  'g.idgrupo',   '=', 'dgm.idgrupo')
             ->join('materia as m', 'm.idmateria', '=', 'dgm.idmateria')
             ->leftJoin('horarios as h', 'h.idgrupo', '=', 'g.idgrupo')

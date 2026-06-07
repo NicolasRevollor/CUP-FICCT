@@ -14,7 +14,13 @@ export default function DocenteDashboard() {
   const [grupos,       setGrupos]       = useState([])
   const [loading,      setLoading]      = useState(true)
   const [error,        setError]        = useState('')
-  const [mostrarPerfil, setMostrarPerfil] = useState(false)
+  const [mostrarPerfil,  setMostrarPerfil]  = useState(false)
+  const [formPass,       setFormPass]       = useState({ password_actual: '', password_nuevo: '', password_confirm: '' })
+  const [showPassActual, setShowPassActual] = useState(false)
+  const [showPassNuevo,  setShowPassNuevo]  = useState(false)
+  const [errorPass,      setErrorPass]      = useState('')
+  const [exitoPass,      setExitoPass]      = useState('')
+  const [loadingPass,    setLoadingPass]    = useState(false)
 
   const [grupoActivo,    setGrupoActivo]    = useState(null)
   const [postulantes,    setPostulantes]    = useState([])
@@ -78,6 +84,20 @@ export default function DocenteDashboard() {
         await refrescarExamenes()
       } else setErrorExamen(data.message)
     } catch { setErrorExamen('Error de conexión') }
+  }
+
+  const handleCambiarPass = async (e) => {
+    e.preventDefault(); setErrorPass(''); setExitoPass(''); setLoadingPass(true)
+    if (formPass.password_nuevo !== formPass.password_confirm) {
+      setErrorPass('Las contraseñas nuevas no coinciden'); setLoadingPass(false); return
+    }
+    try {
+      const res  = await apiFetch('/api/cambiar-password', { method: 'POST', body: JSON.stringify(formPass) })
+      const data = await res.json()
+      if (res.ok) { setExitoPass(data.message); setFormPass({ password_actual: '', password_nuevo: '', password_confirm: '' }) }
+      else          setErrorPass(data.message)
+    } catch { setErrorPass('Error de conexión') }
+    finally { setLoadingPass(false) }
   }
 
   const handleLogout = async () => {
@@ -157,6 +177,37 @@ export default function DocenteDashboard() {
                     <div style={{ fontWeight: 600, fontSize: 13 }}>{val}</div>
                   </div>
                 ))}
+              </div>
+
+              <div style={{ borderTop: '1px solid #e5e7eb', marginTop: 20, paddingTop: 20 }}>
+                <div style={{ fontWeight: 600, fontSize: 13, marginBottom: 14 }}><i className="bi bi-key" style={{ marginRight: 6 }}></i>Cambiar contraseña</div>
+                {errorPass && <div className="alert alert-danger"><i className="bi bi-exclamation-circle"></i>{errorPass}</div>}
+                {exitoPass && <div className="alert alert-success"><i className="bi bi-check-circle"></i>{exitoPass}</div>}
+                <form onSubmit={handleCambiarPass}>
+                  <div className="form-row-3">
+                    {[
+                      ['password_actual',  'Contraseña actual',    showPassActual, () => setShowPassActual(v => !v)],
+                      ['password_nuevo',   'Nueva contraseña',     showPassNuevo,  () => setShowPassNuevo(v => !v)],
+                      ['password_confirm', 'Confirmar contraseña', showPassNuevo,  () => setShowPassNuevo(v => !v)],
+                    ].map(([key, lbl, show, toggle]) => (
+                      <div className="form-group" key={key}>
+                        <label className="form-label" style={{ fontSize: 12 }}>{lbl}</label>
+                        <div style={{ position: 'relative' }}>
+                          <input type={show ? 'text' : 'password'} className="form-input"
+                            value={formPass[key]} onChange={e => setFormPass(f => ({ ...f, [key]: e.target.value }))}
+                            required style={{ paddingRight: 36, fontSize: 13 }} />
+                          <button type="button" onClick={toggle} tabIndex={-1}
+                            style={{ position: 'absolute', right: 8, top: '50%', transform: 'translateY(-50%)', background: 'none', border: 'none', cursor: 'pointer', color: '#9ca3af', padding: 2 }}>
+                            <i className={`bi ${show ? 'bi-eye-slash' : 'bi-eye'}`}></i>
+                          </button>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                  <button type="submit" className="btn btn-primary btn-sm" disabled={loadingPass}>
+                    <i className="bi bi-save"></i> {loadingPass ? 'Guardando...' : 'Actualizar contraseña'}
+                  </button>
+                </form>
               </div>
             </div>
           </div>

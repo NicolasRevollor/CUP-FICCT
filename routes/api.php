@@ -14,6 +14,7 @@ use App\Http\Controllers\RegistroController;
 
 // ── Rutas públicas ───────────────────────────────────────────
 Route::post('/login',                    [AuthController::class,    'login']);
+Route::post('/recuperar-password',       [AuthController::class,    'recuperarPassword']);
 Route::post('/registro/intent',          [RegistroController::class,'crearIntent']);
 Route::post('/registro',                 [RegistroController::class,'registrar']);
 

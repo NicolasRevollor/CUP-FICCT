@@ -54,34 +54,38 @@ class RegistroController extends Controller
             return response()->json(['message' => 'Error al verificar el pago: ' . $e->getMessage()], 400);
         }
 
-        DB::transaction(function () use ($request) {
-            // Crear postulante
-            $idPostulante = DB::table('postulante')->insertGetId([
-                'ci'                 => $request->ci,
-                'nombres'            => $request->nombres,
-                'apellidos'          => $request->apellidos,
-                'sexo'               => $request->sexo,
-                'direccion'          => $request->direccion,
-                'telefono'           => $request->telefono,
-                'correo'             => $request->correo,
-                'colegioprocedencia' => $request->colegioProcedencia,
-                'ciudad'             => $request->ciudad,
-                'titulobachiller'    => $request->tituloBachiller ?? false,
-                'otrosrequisitos'    => $request->otrosRequisitos,
-                'estadopostulante'   => 'PENDIENTE',
-                'promedio_final'     => 0,
-            ]);
+        try {
+            DB::transaction(function () use ($request) {
+                // Crear postulante
+                $idPostulante = DB::table('postulante')->insertGetId([
+                    'ci'                 => $request->ci,
+                    'nombres'            => $request->nombres,
+                    'apellidos'          => $request->apellidos,
+                    'sexo'               => $request->sexo,
+                    'direccion'          => $request->direccion,
+                    'telefono'           => $request->telefono,
+                    'correo'             => $request->correo,
+                    'colegioprocedencia' => $request->colegioProcedencia,
+                    'ciudad'             => $request->ciudad,
+                    'titulobachiller'    => $request->tituloBachiller ?? false,
+                    'otrosrequisitos'    => $request->otrosRequisitos,
+                    'estadopostulante'   => 'PENDIENTE',
+                    'promedio_final'     => 0,
+                ]);
 
-            // Registrar pago confirmado
-            DB::table('pagos')->insert([
-                'idpostulante'     => $idPostulante,
-                'monto'            => $request->monto,
-                'fechapago'        => now(),
-                'metodopago'       => 'TRANSFERENCIA',
-                'codgotransaccion' => $request->paymentIntentId,
-                'estadopago'       => 'CONFIRMADO',
-            ]);
-        });
+                // Registrar pago confirmado
+                DB::table('pagos')->insert([
+                    'idpostulante'     => $idPostulante,
+                    'monto'            => $request->monto,
+                    'fechapago'        => now(),
+                    'metodopago'       => 'TRANSFERENCIA',
+                    'codgotransaccion' => $request->paymentIntentId,
+                    'estadopago'       => 'CONFIRMADO',
+                ]);
+            });
+        } catch (\Throwable $e) {
+            return response()->json(['message' => $e->getMessage()], 500);
+        }
 
         // Enviar correo de confirmación
         try {

@@ -3,15 +3,15 @@ import { useNavigate } from 'react-router-dom'
 import { apiFetch } from '../api'
 
 function Login() {
-  const [usuario,       setUsuario]       = useState('')
-  const [password,      setPassword]      = useState('')
-  const [showPassword,  setShowPassword]  = useState(false)
-  const [error,         setError]         = useState('')
-  const [loading,       setLoading]       = useState(false)
+  const [usuario,        setUsuario]        = useState('')
+  const [password,       setPassword]       = useState('')
+  const [showPassword,   setShowPassword]   = useState(false)
+  const [rememberMe,     setRememberMe]     = useState(false)
+  const [error,          setError]          = useState('')
+  const [loading,        setLoading]        = useState(false)
   const [blockedSeconds, setBlockedSeconds] = useState(0)
   const navigate = useNavigate()
 
-  // Countdown cuando la cuenta está bloqueada
   useEffect(() => {
     if (blockedSeconds <= 0) return
     const timer = setInterval(() => {
@@ -54,60 +54,56 @@ function Login() {
     }
   }
 
+  const fechas = [
+    { evento: 'Semestre I - 2024',        fecha: '15 Ene – 30 Ene' },
+    { evento: 'Exámenes de Suficiencia',  fecha: '05 Feb – 12 Feb' },
+    { evento: 'Cursos de Verano',         fecha: 'Terminado'       },
+  ]
+
   return (
     <div className="login-page">
 
       {/* ── Panel izquierdo ── */}
       <div className="login-left">
         <div className="login-brand">
-          <div className="login-brand-icon">FC</div>
-          <div>
-            <div className="login-brand-name">FICCT</div>
-            <div className="login-brand-sub">UAGRM</div>
+          <div className="login-brand-icon">
+            <i className="bi bi-bank"></i>
+          </div>
+          <span className="login-brand-name">FICCT Portal</span>
+        </div>
+
+        <div className="login-left-content">
+          <h1 className="login-title">Gestión Académica<br />Integral</h1>
+          <p className="login-desc">
+            Bienvenido al sistema central de la Facultad de Ingeniería en Ciencias de la Computación
+            y Telecomunicaciones. Acceda a sus recursos académicos, registros y servicios administrativos.
+          </p>
+
+          <div className="login-dates-card">
+            <div className="login-dates-header">PRÓXIMAS FECHAS DE INSCRIPCIÓN</div>
+            {fechas.map(f => (
+              <div className="login-dates-row" key={f.evento}>
+                <span className="login-dates-evento">{f.evento}</span>
+                <span className="login-dates-fecha">{f.fecha}</span>
+              </div>
+            ))}
           </div>
         </div>
 
-        <h1 className="login-title">
-          Sistema de<br />Admisión<br />Académica
-        </h1>
-        <p className="login-desc">
-          Gestión integral del proceso de admisión de la Facultad de Ingeniería
-          en Ciencias de la Computación y Telecomunicaciones.
-        </p>
-
-        <div className="login-features">
-          {[
-            { icon: 'bi-shield-check', title: 'Acceso seguro por roles',       sub: 'Administrador, Docente y Postulante' },
-            { icon: 'bi-file-earmark-text', title: 'Gestión de expedientes',   sub: 'Documentación digital del postulante' },
-            { icon: 'bi-people', title: 'Apertura automática de grupos',        sub: 'Algoritmo de distribución equitativa' },
-          ].map(f => (
-            <div className="login-feature" key={f.title}>
-              <div className="login-feature-icon"><i className={`bi ${f.icon}`}></i></div>
-              <div>
-                <div className="login-feature-title">{f.title}</div>
-                <div className="login-feature-sub">{f.sub}</div>
-              </div>
-            </div>
-          ))}
+        <div className="login-left-footer">
+          © 2024 Facultad de Ingeniería en Ciencias de la Computación y Telecomunicaciones
         </div>
       </div>
 
       {/* ── Panel derecho ── */}
       <div className="login-right">
         <div className="login-box">
-          <button
-            onClick={() => navigate('/')}
-            style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#6b7280', fontSize: 13, display: 'flex', alignItems: 'center', gap: 6, padding: 0, marginBottom: 20 }}
-          >
-            <i className="bi bi-arrow-left"></i> Volver al inicio
-          </button>
-          <h2 className="login-heading">Bienvenido</h2>
-          <p className="login-subheading">Ingresa tus credenciales para acceder al sistema</p>
+          <h2 className="login-heading">Iniciar Sesión</h2>
+          <p className="login-subheading">Ingrese sus credenciales institucionales para continuar.</p>
 
-          {/* Bloqueo con countdown */}
           {blockedSeconds > 0 && (
-            <div className="alert alert-danger" style={{ textAlign: 'center' }}>
-              <i className="bi bi-lock-fill"></i> Cuenta bloqueada temporalmente
+            <div className="alert alert-danger" style={{ flexDirection: 'column', alignItems: 'center', textAlign: 'center' }}>
+              <div><i className="bi bi-lock-fill"></i> Cuenta bloqueada temporalmente</div>
               <div style={{ fontSize: 28, fontWeight: 800, margin: '8px 0 4px', fontFamily: 'monospace', color: '#dc2626' }}>
                 {formatCountdown(blockedSeconds)}
               </div>
@@ -115,7 +111,6 @@ function Login() {
             </div>
           )}
 
-          {/* Error normal */}
           {error && blockedSeconds === 0 && (
             <div className="alert alert-danger">
               <i className="bi bi-exclamation-circle"></i>{error}
@@ -124,13 +119,16 @@ function Login() {
 
           <form onSubmit={handleLogin}>
             <div className="form-group">
-              <label className="form-label">Usuario</label>
-              <div className="input-wrap">
+              <div className="login-label-row">
+                <label className="form-label" style={{ marginBottom: 0 }}>Usuario o Correo Institucional</label>
+                <button type="button" className="login-link-btn" tabIndex={-1}>¿Olvidó su usuario?</button>
+              </div>
+              <div className="input-wrap" style={{ marginTop: 6 }}>
                 <i className="bi bi-person input-prefix-icon"></i>
                 <input
                   type="text"
                   className="form-input with-icon"
-                  placeholder="Nombre de usuario"
+                  placeholder="ej. p.perez@uagrm.edu.bo"
                   value={usuario}
                   onChange={e => setUsuario(e.target.value)}
                   required
@@ -141,8 +139,16 @@ function Login() {
             </div>
 
             <div className="form-group">
-              <label className="form-label">Contraseña</label>
-              <div className="input-wrap" style={{ position: 'relative' }}>
+              <div className="login-label-row">
+                <label className="form-label" style={{ marginBottom: 0 }}>Contraseña</label>
+                <button
+                  type="button"
+                  className="login-link-btn"
+                  onClick={() => navigate('/recuperar-password')}
+                  tabIndex={-1}
+                >¿Olvidó su contraseña?</button>
+              </div>
+              <div className="input-wrap" style={{ marginTop: 6, position: 'relative' }}>
                 <i className="bi bi-lock input-prefix-icon"></i>
                 <input
                   type={showPassword ? 'text' : 'password'}
@@ -166,29 +172,47 @@ function Login() {
               </div>
             </div>
 
-            <div style={{ textAlign: 'right', marginBottom: 16, marginTop: -8 }}>
-              <button
-                type="button"
-                onClick={() => navigate('/recuperar-password')}
-                style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#2563eb', fontSize: 13, padding: 0 }}
-              >
-                ¿Olvidaste tu contraseña?
-              </button>
+            <div className="checkbox-row" style={{ marginBottom: 24 }}>
+              <input
+                type="checkbox"
+                id="remember"
+                checked={rememberMe}
+                onChange={e => setRememberMe(e.target.checked)}
+              />
+              <label className="checkbox-label" htmlFor="remember">Mantener sesión iniciada</label>
             </div>
 
             <button
               type="submit"
-              className="btn btn-primary btn-full"
-              style={{ padding: '11px 16px', fontSize: 14 }}
+              className="btn-login-primary"
               disabled={loading || blockedSeconds > 0}
             >
               {loading
-                ? <><span className="spinner" style={{ width: 16, height: 16, borderWidth: 2, marginBottom: 0 }}></span> Iniciando sesión...</>
-                : 'Ingresar al Sistema'}
+                ? <><span className="spinner" style={{ width: 16, height: 16, borderWidth: 2, marginBottom: 0, borderTopColor: '#fff' }}></span> Iniciando sesión...</>
+                : 'INGRESAR AL PORTAL'}
             </button>
           </form>
 
-          <p className="login-footer-text">Las cuentas son gestionadas por el administrador del sistema.</p>
+          <div style={{ margin: '20px 0 12px', textAlign: 'center' }}>
+            <span style={{ fontSize: 13, color: '#43474f' }}>¿Es un nuevo estudiante?</span>
+          </div>
+
+          <button
+            type="button"
+            className="btn-login-outline"
+            onClick={() => navigate('/registro')}
+          >
+            Solicitar Registro de Usuario
+          </button>
+
+          <div className="login-meta-links">
+            <button type="button" className="login-meta-btn">
+              <i className="bi bi-question-circle"></i> Soporte Técnico
+            </button>
+            <button type="button" className="login-meta-btn">
+              <i className="bi bi-globe"></i> Idioma: Español
+            </button>
+          </div>
         </div>
       </div>
     </div>

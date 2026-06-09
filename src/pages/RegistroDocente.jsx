@@ -2,25 +2,42 @@ import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import BASE_URL from '../api'
 
+const DOCS_CAMPOS = [
+  { key: 'titulo_profesional', label: 'Título Profesional', icon: 'bi-mortarboard', hint: 'PDF o imagen de tu título universitario' },
+  { key: 'maestria_doc',       label: 'Maestría',           icon: 'bi-award',       hint: 'PDF o imagen del diploma de maestría (si aplica)' },
+  { key: 'diplomado_doc',      label: 'Diplomado en Educación Superior', icon: 'bi-patch-check', hint: 'PDF o imagen del diplomado (si aplica)' },
+  { key: 'cv',                 label: 'CV / Hoja de Vida',  icon: 'bi-file-person', hint: 'PDF o DOC con tu currículum vitae' },
+]
+const ACEPTA = '.pdf,.jpg,.jpeg,.png,.gif,.webp,.doc,.docx'
+
 export default function RegistroDocente() {
-  const navigate  = useNavigate()
-  const [step, setStep]         = useState(1)
-  const [completado, setComp]   = useState(false)
-  const [loading, setLoading]   = useState(false)
-  const [error, setError]       = useState('')
-  const [archivos, setArchivos] = useState([])
+  const navigate = useNavigate()
+  const [step, setStep]       = useState(1)
+  const [completado, setComp] = useState(false)
+  const [loading, setLoading] = useState(false)
+  const [error, setError]     = useState('')
+  const [docs, setDocs]       = useState({ titulo_profesional: null, maestria_doc: null, diplomado_doc: null, cv: null })
   const [form, setForm] = useState({
     ci: '', nombres: '', apellidos: '', sexo: 'M',
-    correo: '', telefono: '', profesion: '',
-    maestria: '', diplomadoedsup: false,
+    correo: '', telefono: '', profesion: '', maestria: '',
   })
   const [errors, setErrors] = useState({})
 
   const onChange = (e) => {
-    const { name, value, type, checked } = e.target
-    setForm(f => ({ ...f, [name]: type === 'checkbox' ? checked : value }))
+    const { name, value } = e.target
+    setForm(f => ({ ...f, [name]: value }))
     setErrors(er => ({ ...er, [name]: '' }))
   }
+
+  const onDocChange = (key, e) => {
+    const file = e.target.files[0]
+    if (!file) return
+    if (file.size > 10 * 1024 * 1024) { setError(`"${key}" supera los 10MB`); return }
+    setDocs(d => ({ ...d, [key]: file }))
+    setError('')
+  }
+
+  const removeDoc = (key) => setDocs(d => ({ ...d, [key]: null }))
 
   const validar = () => {
     const e = {}
@@ -33,48 +50,52 @@ export default function RegistroDocente() {
     return Object.keys(e).length === 0
   }
 
-  const handleArchivos = (e) => {
-    const files = Array.from(e.target.files)
-    const permitidos = ['application/pdf','image/jpeg','image/jpg','image/png','image/gif','image/webp','application/msword','application/vnd.openxmlformats-officedocument.wordprocessingml.document']
-    const validos = files.filter(f => permitidos.includes(f.type) && f.size <= 10 * 1024 * 1024)
-    if (validos.length !== files.length) {
-      setError('Algunos archivos fueron rechazados. Solo PDF, imágenes y DOC/DOCX de hasta 10MB.')
-    }
-    setArchivos(prev => [...prev, ...validos].slice(0, 10))
-  }
-
-  const removeArchivo = (i) => setArchivos(prev => prev.filter((_, idx) => idx !== i))
-
   const handleSubmit = async (e) => {
     e.preventDefault()
     setLoading(true); setError('')
+
+    const controller = new AbortController()
+    const timeout = setTimeout(() => controller.abort(), 30000)
+
     try {
       const token = localStorage.getItem('token')
       const fd = new FormData()
-      Object.entries(form).forEach(([k, v]) => fd.append(k, v))
-      archivos.forEach(f => fd.append('documentos[]', f))
+      Object.entries(form).forEach(([k, v]) => fd.append(k, v ?? ''))
+      Object.entries(docs).forEach(([k, f]) => { if (f) fd.append(k, f) })
 
       const res = await fetch(`${BASE_URL}/api/postulacion-docente`, {
         method: 'POST',
+        signal: controller.signal,
         headers: {
           'Accept': 'application/json',
           ...(token ? { Authorization: `Bearer ${token}` } : {}),
         },
         body: fd,
       })
-      const data = await res.json()
+
+      clearTimeout(timeout)
+      const text = await res.text()
+      let data
+      try { data = JSON.parse(text) } catch { data = { message: text || 'Error del servidor' } }
+
       if (!res.ok) { setError(data.message || 'Error al enviar la postulación'); return }
       setComp(true)
-    } catch {
-      setError('Error de conexión. Intenta de nuevo.')
+    } catch (err) {
+      clearTimeout(timeout)
+      if (err.name === 'AbortError') {
+        setError('La solicitud tardó demasiado. Verifica tu conexión e intenta de nuevo.')
+      } else {
+        setError('Error de conexión. Intenta de nuevo.')
+      }
     } finally {
       setLoading(false)
     }
   }
 
   const iconoArchivo = (tipo) => {
-    if (tipo?.includes('pdf'))   return 'bi-file-earmark-pdf-fill'
-    if (tipo?.includes('image')) return 'bi-file-earmark-image-fill'
+    if (!tipo) return 'bi-file-earmark'
+    if (tipo.includes('pdf'))   return 'bi-file-earmark-pdf-fill'
+    if (tipo.includes('image')) return 'bi-file-earmark-image-fill'
     return 'bi-file-earmark-word-fill'
   }
 
@@ -131,6 +152,7 @@ export default function RegistroDocente() {
           <div className="card-body">
             {error && <div className="alert alert-danger"><i className="bi bi-exclamation-circle"></i> {error}</div>}
 
+            {/* ── PASO 1: Datos ── */}
             {step === 1 && (
               <form onSubmit={(e) => { e.preventDefault(); if (validar()) { setError(''); setStep(2) } }}>
                 <div className="form-section">
@@ -182,12 +204,6 @@ export default function RegistroDocente() {
                       <input className="form-input" name="maestria" value={form.maestria} onChange={onChange} placeholder="Ej: Maestría en IA" />
                     </div>
                   </div>
-                  <div className="form-group">
-                    <label className="checkbox-row" style={{ cursor: 'pointer' }}>
-                      <input type="checkbox" name="diplomadoedsup" checked={form.diplomadoedsup} onChange={onChange} />
-                      <span className="checkbox-label">Tengo Diplomado en Educación Superior</span>
-                    </label>
-                  </div>
                 </div>
 
                 <div className="form-actions">
@@ -199,44 +215,51 @@ export default function RegistroDocente() {
               </form>
             )}
 
+            {/* ── PASO 2: Documentos ── */}
             {step === 2 && (
               <form onSubmit={handleSubmit}>
                 <div className="form-section">
                   <div className="form-section-title"><i className="bi bi-paperclip"></i> Documentos de respaldo</div>
-                  <p style={{ fontSize: 13, color: '#6b7280', marginBottom: 16 }}>
-                    Adjunta documentos que respalden tu postulación: título profesional, maestría, diplomados, CV, etc.
-                    Formatos permitidos: PDF, imágenes (JPG, PNG), DOC/DOCX. Máximo 10 archivos de 10MB cada uno.
+                  <p style={{ fontSize: 13, color: '#6b7280', marginBottom: 20 }}>
+                    Sube un archivo por cada documento. Formatos: PDF, JPG, PNG, DOC/DOCX. Máximo 10MB por archivo.
                   </p>
 
-                  <label style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', border: '2px dashed #d1d5db', borderRadius: 10, padding: '28px 20px', cursor: 'pointer', background: '#f9fafb', gap: 8 }}>
-                    <i className="bi bi-cloud-upload" style={{ fontSize: 28, color: '#9ca3af' }}></i>
-                    <span style={{ fontSize: 13, fontWeight: 600, color: '#374151' }}>Haz clic para seleccionar archivos</span>
-                    <span style={{ fontSize: 12, color: '#9ca3af' }}>o arrastra y suelta aquí</span>
-                    <input type="file" multiple accept=".pdf,.jpg,.jpeg,.png,.gif,.webp,.doc,.docx" onChange={handleArchivos} style={{ display: 'none' }} />
-                  </label>
-
-                  {archivos.length > 0 && (
-                    <div style={{ marginTop: 14, display: 'flex', flexDirection: 'column', gap: 8 }}>
-                      {archivos.map((f, i) => (
-                        <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 10, background: '#f3f4f6', borderRadius: 8, padding: '8px 12px' }}>
-                          <i className={`bi ${iconoArchivo(f.type)}`} style={{ fontSize: 18, color: '#c62828', flexShrink: 0 }}></i>
-                          <div style={{ flex: 1, minWidth: 0 }}>
-                            <div style={{ fontSize: 13, fontWeight: 500, color: '#111827', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{f.name}</div>
-                            <div style={{ fontSize: 11, color: '#9ca3af' }}>{(f.size / 1024).toFixed(0)} KB</div>
-                          </div>
-                          <button type="button" onClick={() => removeArchivo(i)} style={{ background: 'none', border: 'none', color: '#9ca3af', cursor: 'pointer', fontSize: 16, padding: 0, flexShrink: 0 }}>
-                            <i className="bi bi-x"></i>
-                          </button>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+                    {DOCS_CAMPOS.map(({ key, label, icon, hint }) => (
+                      <div key={key} style={{ border: '1px solid #e5e7eb', borderRadius: 10, overflow: 'hidden' }}>
+                        <div style={{ background: '#f9fafb', padding: '10px 14px', borderBottom: '1px solid #e5e7eb', display: 'flex', alignItems: 'center', gap: 8 }}>
+                          <i className={`bi ${icon}`} style={{ color: '#c62828', fontSize: 16 }}></i>
+                          <span style={{ fontWeight: 600, fontSize: 13, color: '#111827' }}>{label}</span>
                         </div>
-                      ))}
-                    </div>
-                  )}
+                        <div style={{ padding: '12px 14px' }}>
+                          {docs[key] ? (
+                            <div style={{ display: 'flex', alignItems: 'center', gap: 10, background: '#f3f4f6', borderRadius: 8, padding: '8px 12px' }}>
+                              <i className={`bi ${iconoArchivo(docs[key].type)}`} style={{ fontSize: 18, color: '#c62828', flexShrink: 0 }}></i>
+                              <div style={{ flex: 1, minWidth: 0 }}>
+                                <div style={{ fontSize: 13, fontWeight: 500, color: '#111827', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{docs[key].name}</div>
+                                <div style={{ fontSize: 11, color: '#9ca3af' }}>{(docs[key].size / 1024).toFixed(0)} KB</div>
+                              </div>
+                              <button type="button" onClick={() => removeDoc(key)} style={{ background: 'none', border: 'none', color: '#9ca3af', cursor: 'pointer', fontSize: 18, padding: 0, flexShrink: 0 }}>
+                                <i className="bi bi-x-circle"></i>
+                              </button>
+                            </div>
+                          ) : (
+                            <label style={{ display: 'flex', alignItems: 'center', gap: 10, cursor: 'pointer' }}>
+                              <div style={{ background: '#fff', border: '1px dashed #d1d5db', borderRadius: 8, padding: '8px 14px', fontSize: 13, color: '#6b7280', flex: 1, textAlign: 'center' }}>
+                                <i className="bi bi-upload" style={{ marginRight: 6 }}></i> Seleccionar archivo
+                              </div>
+                              <input type="file" accept={ACEPTA} onChange={(e) => onDocChange(key, e)} style={{ display: 'none' }} />
+                            </label>
+                          )}
+                          <div style={{ fontSize: 11, color: '#9ca3af', marginTop: 5 }}>{hint}</div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
 
-                  {archivos.length === 0 && (
-                    <p style={{ fontSize: 12, color: '#9ca3af', textAlign: 'center', marginTop: 10 }}>
-                      Sin documentos adjuntos. Puedes enviar la postulación sin archivos.
-                    </p>
-                  )}
+                  <p style={{ fontSize: 12, color: '#9ca3af', textAlign: 'center', marginTop: 14 }}>
+                    Todos los campos son opcionales. Puedes enviar la postulación sin archivos.
+                  </p>
                 </div>
 
                 <div className="form-actions">
@@ -244,7 +267,9 @@ export default function RegistroDocente() {
                     <i className="bi bi-arrow-left"></i> Volver
                   </button>
                   <button type="submit" className="btn btn-primary" disabled={loading} style={{ background: '#c62828', borderColor: '#c62828' }}>
-                    {loading ? <><span className="spinner" style={{ width: 15, height: 15, borderWidth: 2, marginBottom: 0 }}></span> Enviando...</> : <><i className="bi bi-send"></i> Enviar postulación</>}
+                    {loading
+                      ? <><span className="spinner" style={{ width: 15, height: 15, borderWidth: 2, marginBottom: 0 }}></span> Enviando...</>
+                      : <><i className="bi bi-send"></i> Enviar postulación</>}
                   </button>
                 </div>
               </form>

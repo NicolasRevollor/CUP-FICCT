@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
@@ -185,6 +186,12 @@ class PostulacionDocenteController extends Controller
                 username: $username,
                 password: $password,
             ));
-        } catch (\Throwable) {}
+        } catch (\Throwable $e) {
+            Log::error('Error al aprobar docente: ' . $e->getMessage(), [
+                'ci'     => $postulacion->ci,
+                'correo' => $postulacion->correo,
+                'trace'  => $e->getTraceAsString(),
+            ]);
+        }
     }
 }

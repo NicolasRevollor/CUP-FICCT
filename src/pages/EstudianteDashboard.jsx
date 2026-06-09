@@ -2,7 +2,7 @@ import { useState, useEffect, useRef } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { apiFetch } from '../api'
 
-const TABS = ['perfil', 'grupo', 'examenes', 'asistencia']
+const TABS  = ['perfil', 'grupo', 'examenes', 'asistencia']
 const TAB_LABELS = {
   perfil:     'Mi Perfil',
   grupo:      'Mi Grupo',
@@ -17,10 +17,18 @@ function EstudianteDashboard() {
   const [examenes,   setExamenes]   = useState([])
   const [asistencia, setAsistencia] = useState([])
   const [loading,    setLoading]    = useState(true)
-  const [fotoLoading,setFotoLoading]= useState(false)
+  const [fotoLoading,    setFotoLoading]    = useState(false)
+  const [cambioPass,     setCambioPass]     = useState(false)
+  const [passForm,       setPassForm]       = useState({ password_actual: '', password_nuevo: '', password_confirm: '' })
+  const [passError,      setPassError]      = useState('')
+  const [passLoading,    setPassLoading]    = useState(false)
   const fileRef = useRef()
   const navigate = useNavigate()
   const usuario = JSON.parse(localStorage.getItem('usuario') || '{}')
+
+  useEffect(() => {
+    if (usuario.debe_cambiar_password) setCambioPass(true)
+  }, [])
 
   useEffect(() => {
     Promise.all([
@@ -35,6 +43,30 @@ function EstudianteDashboard() {
       setAsistencia(Array.isArray(a) ? a : [])
     }).finally(() => setLoading(false))
   }, [])
+
+  const handleCambiarPassword = async (e) => {
+    e.preventDefault()
+    setPassError('')
+    if (passForm.password_nuevo !== passForm.password_confirm) {
+      setPassError('Las contraseñas nuevas no coinciden'); return
+    }
+    setPassLoading(true)
+    try {
+      const res  = await apiFetch('/api/cambiar-password', {
+        method: 'POST',
+        body: JSON.stringify(passForm),
+      })
+      const data = await res.json()
+      if (res.ok) {
+        const u = { ...usuario, debe_cambiar_password: false }
+        localStorage.setItem('usuario', JSON.stringify(u))
+        setCambioPass(false)
+      } else {
+        setPassError(data.message)
+      }
+    } catch { setPassError('Error de conexión') }
+    finally { setPassLoading(false) }
+  }
 
   const handleLogout = async () => {
     await apiFetch('/api/logout', { method: 'POST' })
@@ -307,6 +339,72 @@ function EstudianteDashboard() {
                   </table>
                 </div>
               )}
+            </div>
+          </div>
+        )}
+
+        {/* ── MODAL CAMBIO OBLIGATORIO DE CONTRASEÑA ── */}
+        {cambioPass && (
+          <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,.6)', zIndex: 1000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 16 }}>
+            <div style={{ background: '#fff', borderRadius: 12, padding: 36, width: '100%', maxWidth: 420, boxShadow: '0 8px 32px rgba(0,0,0,.2)' }}>
+              <div style={{ textAlign: 'center', marginBottom: 20 }}>
+                <div style={{ fontSize: 36, marginBottom: 8 }}>🔐</div>
+                <div style={{ fontWeight: 700, fontSize: 18, color: '#191c1e' }}>Cambia tu contraseña</div>
+                <div style={{ fontSize: 13, color: '#737780', marginTop: 6, lineHeight: 1.5 }}>
+                  Es tu primer ingreso. Por seguridad debes establecer una contraseña personal antes de continuar.
+                </div>
+              </div>
+
+              {passError && (
+                <div className="alert alert-danger" style={{ marginBottom: 14 }}>
+                  <i className="bi bi-exclamation-circle"></i>{passError}
+                </div>
+              )}
+
+              <form onSubmit={handleCambiarPassword}>
+                <div className="form-group">
+                  <label className="form-label">Contraseña temporal (recibida por email)</label>
+                  <input
+                    type="password"
+                    className="form-input"
+                    placeholder="Tu contraseña actual"
+                    value={passForm.password_actual}
+                    onChange={e => setPassForm(f => ({ ...f, password_actual: e.target.value }))}
+                    required
+                  />
+                </div>
+                <div className="form-group">
+                  <label className="form-label">Nueva contraseña</label>
+                  <input
+                    type="password"
+                    className="form-input"
+                    placeholder="Mínimo 6 caracteres"
+                    value={passForm.password_nuevo}
+                    onChange={e => setPassForm(f => ({ ...f, password_nuevo: e.target.value }))}
+                    required
+                    minLength={6}
+                  />
+                </div>
+                <div className="form-group">
+                  <label className="form-label">Confirmar nueva contraseña</label>
+                  <input
+                    type="password"
+                    className="form-input"
+                    placeholder="Repite la nueva contraseña"
+                    value={passForm.password_confirm}
+                    onChange={e => setPassForm(f => ({ ...f, password_confirm: e.target.value }))}
+                    required
+                  />
+                </div>
+                <button
+                  type="submit"
+                  className="btn-login-primary"
+                  disabled={passLoading}
+                  style={{ marginTop: 8 }}
+                >
+                  {passLoading ? 'Guardando...' : 'ESTABLECER CONTRASEÑA'}
+                </button>
+              </form>
             </div>
           </div>
         )}

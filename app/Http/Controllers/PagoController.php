@@ -60,7 +60,7 @@ class PagoController extends Controller
             'metodopago'       => $request->metodopago,
             'codgotransaccion' => $request->codgotransaccion,
             'estadopago'       => $request->estadopago,
-        ]);
+        ], 'idpagos');
 
         return response()->json(['message' => 'Pago registrado correctamente', 'idpagos' => $id], 201);
     }

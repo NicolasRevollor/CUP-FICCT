@@ -13,6 +13,7 @@ use App\Http\Controllers\InscripcionController;
 use App\Http\Controllers\RegistroController;
 use App\Http\Controllers\PostulacionDocenteController;
 use App\Http\Controllers\EstudianteController;
+use App\Http\Controllers\BitacoraController;
 
 // ── Rutas públicas ───────────────────────────────────────────
 Route::post('/login',                    [AuthController::class,    'login']);
@@ -86,6 +87,9 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::get('/postulacion-docente/{id}',                        [PostulacionDocenteController::class, 'show']);
     Route::put('/postulacion-docente/{id}',                        [PostulacionDocenteController::class, 'update']);
     Route::get('/postulacion-docente/{idPostulacion}/documentos/{idDocumento}', [PostulacionDocenteController::class, 'descargarDocumento']);
+
+    // Bitácora (solo ADMINISTRADOR)
+    Route::get('/bitacora', [BitacoraController::class, 'index']);
 
     // Reportes
     Route::get('/reportes/dashboard',            [ReporteController::class, 'dashboard']);

@@ -42,7 +42,7 @@ class AuthController extends Controller
             ->first();
 
         if (!$usuario) {
-            return $this->registrarFallo($key);
+            return $this->registrarFallo($key, $request->Nombre_Usuario, $request);
         }
 
         // Verificar contraseña: soporta bcrypt (nuevo) y md5 (legado, migra automáticamente)
@@ -63,7 +63,7 @@ class AuthController extends Controller
         }
 
         if (!$passwordValida) {
-            return $this->registrarFallo($key);
+            return $this->registrarFallo($key, $request->Nombre_Usuario, $request);
         }
 
         if ($usuario->estado !== 'ACTIVO') {
@@ -81,6 +81,18 @@ class AuthController extends Controller
             ->select('roles.nombre')
             ->first();
 
+        try {
+            DB::table('bitacora')->insert([
+                'idusuario'      => $usuario->idusuario,
+                'nombre_usuario' => $usuario->nombre_usuario,
+                'rol'            => $rol ? $rol->nombre : 'SIN ROL',
+                'ip'             => $request->ip(),
+                'accion'         => 'LOGIN_EXITOSO',
+                'descripcion'    => 'Inicio de sesión exitoso',
+                'fecha'          => now(),
+            ]);
+        } catch (\Throwable) {}
+
         $usuarioModel = Usuario::find($usuario->idusuario);
         $token = $usuarioModel->createToken('api-token')->plainTextToken;
 
@@ -97,7 +109,7 @@ class AuthController extends Controller
         ], 200);
     }
 
-    private function registrarFallo(string $key): \Illuminate\Http\JsonResponse
+    private function registrarFallo(string $key, string $username = '', ?\Illuminate\Http\Request $request = null): \Illuminate\Http\JsonResponse
     {
         $fails = Cache::get($key . '_fails', 0) + 1;
         Cache::put($key . '_fails', $fails, now()->addMinutes(15));
@@ -120,6 +132,18 @@ class AuthController extends Controller
                 'blocked_seconds' => $lockMinutes * 60,
             ], 429);
         }
+
+        try {
+            DB::table('bitacora')->insert([
+                'idusuario'      => null,
+                'nombre_usuario' => $username ?: 'desconocido',
+                'rol'            => null,
+                'ip'             => $request?->ip(),
+                'accion'         => 'LOGIN_FALLIDO',
+                'descripcion'    => "Intento fallido (intento {$fails})",
+                'fecha'          => now(),
+            ]);
+        } catch (\Throwable) {}
 
         $restantes = 3 - $fails;
         return response()->json([
@@ -184,7 +208,26 @@ class AuthController extends Controller
 
     public function logout(Request $request)
     {
-        $request->user()->currentAccessToken()->delete();
+        $user = $request->user();
+
+        $rol = DB::table('usuario_roles')
+            ->join('roles', 'roles.idrol', '=', 'usuario_roles.idrol')
+            ->where('usuario_roles.idusuario', $user->idusuario)
+            ->value('roles.nombre');
+
+        try {
+            DB::table('bitacora')->insert([
+                'idusuario'      => $user->idusuario,
+                'nombre_usuario' => $user->nombre_usuario,
+                'rol'            => $rol ?? 'SIN ROL',
+                'ip'             => $request->ip(),
+                'accion'         => 'LOGOUT',
+                'descripcion'    => 'Cierre de sesión',
+                'fecha'          => now(),
+            ]);
+        } catch (\Throwable) {}
+
+        $user->currentAccessToken()->delete();
         return response()->json(['message' => 'Sesión cerrada correctamente'], 200);
     }
 }

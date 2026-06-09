@@ -246,6 +246,21 @@ body { margin: 0; }
 }
 .login-meta-btn:hover { color: #43474f; }
 
+.login-back-btn {
+  background: none;
+  border: none;
+  cursor: pointer;
+  color: #737780;
+  font-size: 13px;
+  font-family: inherit;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 0;
+  margin-bottom: 20px;
+}
+.login-back-btn:hover { color: #191c1e; }
+
 /* ─── NAVBAR ─────────────────────────────────────────── */
 .app-navbar {
   background: var(--primary);

@@ -98,6 +98,14 @@ function Login() {
       {/* ── Panel derecho ── */}
       <div className="login-right">
         <div className="login-box">
+          <button
+            type="button"
+            onClick={() => navigate('/')}
+            className="login-back-btn"
+          >
+            <i className="bi bi-arrow-left"></i> Volver al inicio
+          </button>
+
           <h2 className="login-heading">Iniciar Sesión</h2>
           <p className="login-subheading">Ingrese sus credenciales institucionales para continuar.</p>
 

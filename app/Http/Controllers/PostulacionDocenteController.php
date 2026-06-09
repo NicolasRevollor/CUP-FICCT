@@ -42,18 +42,20 @@ class PostulacionDocenteController extends Controller
 
     public function store(Request $request)
     {
+        $mimes = 'pdf,jpg,jpeg,png,gif,webp,doc,docx';
         $request->validate([
-            'ci'            => 'required|string|max:20',
-            'nombres'       => 'required|string|max:150',
-            'apellidos'     => 'required|string|max:150',
-            'sexo'          => 'required|in:M,F',
-            'correo'        => 'required|email|max:150',
-            'telefono'      => 'nullable|string|max:20',
-            'profesion'     => 'nullable|string|max:150',
-            'maestria'      => 'nullable|string|max:200',
-            'diplomadoedsup'=> 'nullable|boolean',
-            'documentos'    => 'nullable|array|max:10',
-            'documentos.*'  => 'file|max:10240|mimes:pdf,jpg,jpeg,png,gif,webp,doc,docx',
+            'ci'                 => 'required|string|max:20',
+            'nombres'            => 'required|string|max:150',
+            'apellidos'          => 'required|string|max:150',
+            'sexo'               => 'required|in:M,F',
+            'correo'             => 'required|email|max:150',
+            'telefono'           => 'nullable|string|max:20',
+            'profesion'          => 'nullable|string|max:150',
+            'maestria'           => 'nullable|string|max:200',
+            'titulo_profesional' => "nullable|file|max:10240|mimes:{$mimes}",
+            'maestria_doc'       => "nullable|file|max:10240|mimes:{$mimes}",
+            'diplomado_doc'      => "nullable|file|max:10240|mimes:{$mimes}",
+            'cv'                 => "nullable|file|max:10240|mimes:{$mimes}",
         ]);
 
         $idPostulacion = DB::table('postulacion_docente')->insertGetId([
@@ -65,19 +67,26 @@ class PostulacionDocenteController extends Controller
             'telefono'      => $request->telefono,
             'profesion'     => $request->profesion,
             'maestria'      => $request->maestria,
-            'diplomadoedsup'=> $request->boolean('diplomadoedsup'),
+            'diplomadoedsup'=> false,
             'estado'        => 'PENDIENTE',
             'fecha_postulacion' => now(),
         ], 'idpostulacion');
 
-        if ($request->hasFile('documentos')) {
-            foreach ($request->file('documentos') as $file) {
+        $camposDoc = [
+            'titulo_profesional' => 'Título Profesional',
+            'maestria_doc'       => 'Maestría',
+            'diplomado_doc'      => 'Diplomado en Ed. Superior',
+            'cv'                 => 'CV / Hoja de Vida',
+        ];
+        foreach ($camposDoc as $campo => $etiqueta) {
+            if ($request->hasFile($campo)) {
+                $file          = $request->file($campo);
                 $nombreArchivo = Str::uuid() . '.' . $file->getClientOriginalExtension();
                 $file->storeAs("postulaciones-docente/{$idPostulacion}", $nombreArchivo);
 
                 DB::table('postulacion_docente_documentos')->insert([
                     'idpostulacion'  => $idPostulacion,
-                    'nombre_original'=> $file->getClientOriginalName(),
+                    'nombre_original'=> "[{$etiqueta}] " . $file->getClientOriginalName(),
                     'nombre_archivo' => $nombreArchivo,
                     'tipo_mime'      => $file->getMimeType(),
                     'fecha_subida'   => now(),

@@ -42,7 +42,12 @@ function Login() {
       if (res.ok) {
         localStorage.setItem('token',   data.token)
         localStorage.setItem('usuario', JSON.stringify(data.usuario))
-        navigate(data.usuario.rol === 'DOCENTE' ? '/docente-dashboard' : '/dashboard', { replace: true })
+        const destino = data.usuario.rol === 'DOCENTE'
+          ? '/docente-dashboard'
+          : data.usuario.rol === 'ESTUDIANTE'
+            ? '/estudiante-dashboard'
+            : '/dashboard'
+        navigate(destino, { replace: true })
       } else {
         setError(data.message)
         if (data.blocked_seconds) setBlockedSeconds(data.blocked_seconds)

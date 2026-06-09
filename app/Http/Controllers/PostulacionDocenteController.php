@@ -146,6 +146,8 @@ class PostulacionDocenteController extends Controller
     {
         $username = $postulacion->ci;
         if (DB::table('usuario')->where('nombre_usuario', $username)->exists()) return;
+        if (DB::table('docente')->where('correo', $postulacion->correo)->exists()) return;
+        if (DB::table('docente')->where('ci', $postulacion->ci)->exists()) return;
 
         $password     = 'DOC' . strtoupper(Str::random(5));
         $emailUsuario = DB::table('usuario')->where('email', $postulacion->correo)->exists()

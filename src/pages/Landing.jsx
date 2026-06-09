@@ -215,7 +215,7 @@ export default function Landing() {
           <button onClick={() => navigate('/login')} style={{ background: 'rgba(255,255,255,.1)', border: '1px solid rgba(255,255,255,.2)', color: '#fff', padding: '7px 18px', borderRadius: 6, fontSize: 13, cursor: 'pointer' }}>
             {t.navAcceder}
           </button>
-          <button onClick={() => navigate('/registro')} style={{ background: '#c62828', border: 'none', color: '#fff', padding: '7px 18px', borderRadius: 6, fontSize: 13, fontWeight: 600, cursor: 'pointer' }}>
+          <button onClick={() => navigate('/tipo-inscripcion')} style={{ background: '#c62828', border: 'none', color: '#fff', padding: '7px 18px', borderRadius: 6, fontSize: 13, fontWeight: 600, cursor: 'pointer' }}>
             {t.navInscribirse}
           </button>
         </div>
@@ -236,7 +236,7 @@ export default function Landing() {
             {t.heroDesc}
           </p>
           <div style={{ display: 'flex', gap: 12, justifyContent: 'center', flexWrap: 'wrap' }}>
-            <button onClick={() => navigate('/registro')} style={{ background: '#c62828', border: 'none', color: '#fff', padding: '13px 32px', borderRadius: 8, fontSize: 15, fontWeight: 700, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 8 }}>
+            <button onClick={() => navigate('/tipo-inscripcion')} style={{ background: '#c62828', border: 'none', color: '#fff', padding: '13px 32px', borderRadius: 8, fontSize: 15, fontWeight: 700, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 8 }}>
               <i className="bi bi-person-plus"></i> {t.heroCta}
             </button>
             <a href="#carreras" style={{ background: 'rgba(255,255,255,.1)', border: '1px solid rgba(255,255,255,.2)', color: '#fff', padding: '13px 32px', borderRadius: 8, fontSize: 15, fontWeight: 600, cursor: 'pointer', textDecoration: 'none', display: 'flex', alignItems: 'center', gap: 8 }}>
@@ -351,7 +351,7 @@ export default function Landing() {
             ))}
           </div>
           <div style={{ textAlign: 'center', marginTop: 48 }}>
-            <button onClick={() => navigate('/registro')} style={{ background: '#c62828', border: 'none', color: '#fff', padding: '14px 40px', borderRadius: 8, fontSize: 16, fontWeight: 700, cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: 10 }}>
+            <button onClick={() => navigate('/tipo-inscripcion')} style={{ background: '#c62828', border: 'none', color: '#fff', padding: '14px 40px', borderRadius: 8, fontSize: 16, fontWeight: 700, cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: 10 }}>
               <i className="bi bi-person-plus"></i> {t.procesoCta}
             </button>
           </div>

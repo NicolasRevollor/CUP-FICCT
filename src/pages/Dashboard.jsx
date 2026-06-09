@@ -9,7 +9,8 @@ const MODULOS = [
   { icon: 'bi-journal-text',      title: 'Exámenes',      desc: 'Registro de notas y evaluaciones',       ruta: '/examenes',      label: 'Abrir' },
   { icon: 'bi-collection',        title: 'Grupos',         desc: 'Asignación automática de grupos',        ruta: '/grupos',        label: 'Abrir' },
   { icon: 'bi-cash-stack',        title: 'Pagos',          desc: 'Control de pagos de postulantes',        ruta: '/pagos',         label: 'Abrir' },
-  { icon: 'bi-person-badge',      title: 'Docentes',       desc: 'Gestión del personal docente',           ruta: '/docentes',      label: 'Abrir' },
+  { icon: 'bi-person-badge',      title: 'Docentes',       desc: 'Gestión del personal docente',           ruta: '/docentes',            label: 'Abrir' },
+  { icon: 'bi-person-badge-fill', title: 'Postulaciones',  desc: 'Postulaciones de docentes pendientes',   ruta: '/postulaciones-docente', label: 'Abrir' },
   { icon: 'bi-bar-chart',         title: 'Reportes',       desc: 'Estadísticas y reportes gerenciales',    ruta: '/reportes',      label: 'Abrir' },
 ]
 

@@ -166,12 +166,12 @@ export default function Registro() {
           <h2 style={{ fontWeight: 800, color: '#111827', marginBottom: 8 }}>¡Registro exitoso!</h2>
           <p style={{ color: '#6b7280', marginBottom: 20, fontSize: 14 }}>
             Bienvenido/a <strong>{completado.nombres} {completado.apellidos}</strong>.<br />
-            Tu inscripción al CUP-FICCT 2026 fue completada correctamente.
+            Tu pago fue registrado. El administrador revisará tu solicitud y te enviará tus credenciales de acceso por correo.
           </p>
           <div style={{ background: '#f8f9fa', borderRadius: 8, padding: '14px 16px', marginBottom: 24, textAlign: 'left' }}>
-            <div style={{ fontSize: 12, color: '#6b7280', marginBottom: 4 }}>Tu CI de acceso</div>
+            <div style={{ fontSize: 12, color: '#6b7280', marginBottom: 4 }}>Tu CI de referencia</div>
             <div style={{ fontSize: 20, fontWeight: 800, color: '#0d2451' }}>{completado.ci}</div>
-            <div style={{ fontSize: 12, color: '#9ca3af', marginTop: 4 }}>Guarda este dato para hacer seguimiento de tu proceso</div>
+            <div style={{ fontSize: 12, color: '#9ca3af', marginTop: 4 }}>Guarda este dato — lo necesitarás cuando recibas tus credenciales</div>
           </div>
             <button className="btn btn-primary btn-full" onClick={() => navigate('/')} style={{ background: '#0d2451', borderColor: '#0d2451' }}>
             <i className="bi bi-house"></i> Volver al inicio

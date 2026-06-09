@@ -14,8 +14,11 @@ import Reportes          from './pages/Reportes'
 import Docentes          from './pages/Docentes'
 import Pagos             from './pages/Pagos'
 import Inscripciones     from './pages/Inscripciones'
-import RecuperarPassword    from './pages/RecuperarPassword'
-import EstudianteDashboard  from './pages/EstudianteDashboard'
+import RecuperarPassword      from './pages/RecuperarPassword'
+import EstudianteDashboard    from './pages/EstudianteDashboard'
+import TipoInscripcion        from './pages/TipoInscripcion'
+import RegistroDocente        from './pages/RegistroDocente'
+import PostulacionesDocente   from './pages/PostulacionesDocente'
 
 function App() {
   return (
@@ -36,8 +39,11 @@ function App() {
         <Route path="/docentes"               element={<Docentes />} />
         <Route path="/pagos"                  element={<Pagos />} />
         <Route path="/inscripciones"          element={<Inscripciones />} />
-        <Route path="/recuperar-password"     element={<RecuperarPassword />} />
+        <Route path="/recuperar-password"       element={<RecuperarPassword />} />
         <Route path="/estudiante-dashboard"   element={<EstudianteDashboard />} />
+        <Route path="/tipo-inscripcion"       element={<TipoInscripcion />} />
+        <Route path="/postulacion-docente"    element={<RegistroDocente />} />
+        <Route path="/postulaciones-docente"  element={<PostulacionesDocente />} />
       </Routes>
     </BrowserRouter>
   )

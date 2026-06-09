@@ -100,7 +100,7 @@ class PagoController extends Controller
         $postulante = DB::table('postulante')->where('idpostulante', $idPostulante)->first();
         if (!$postulante || $postulante->idusuario) return;
 
-        $username = 'est_' . $postulante->ci;
+        $username = (string) $postulante->ci;
         if (DB::table('usuario')->where('nombre_usuario', $username)->exists()) return;
 
         $password = 'CUP' . strtoupper(Str::random(5));
@@ -108,10 +108,11 @@ class PagoController extends Controller
         try {
             DB::transaction(function () use ($postulante, $username, $password, $idPostulante) {
                 $idUsuario = DB::table('usuario')->insertGetId([
-                    'nombre_usuario' => $username,
-                    'password'       => Hash::make($password),
-                    'email'          => $postulante->correo,
-                    'estado'         => 'ACTIVO',
+                    'nombre_usuario'       => $username,
+                    'password'             => Hash::make($password),
+                    'email'                => $postulante->correo,
+                    'estado'               => 'ACTIVO',
+                    'debe_cambiar_password' => true,
                 ], 'idusuario');
 
                 $rol = DB::table('roles')->where('nombre', 'ESTUDIANTE')->first();

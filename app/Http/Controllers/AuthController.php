@@ -88,10 +88,11 @@ class AuthController extends Controller
             'message' => 'Login exitoso',
             'token'   => $token,
             'usuario' => [
-                'id'     => $usuario->idusuario,
-                'nombre' => $usuario->nombre_usuario,
-                'email'  => $usuario->email,
-                'rol'    => $rol ? $rol->nombre : 'SIN ROL',
+                'id'                   => $usuario->idusuario,
+                'nombre'               => $usuario->nombre_usuario,
+                'email'                => $usuario->email,
+                'rol'                  => $rol ? $rol->nombre : 'SIN ROL',
+                'debe_cambiar_password' => (bool) ($usuario->debe_cambiar_password ?? false),
             ],
         ], 200);
     }
@@ -174,7 +175,8 @@ class AuthController extends Controller
         }
 
         DB::table('usuario')->where('idusuario', $usuario->idusuario)->update([
-            'password' => Hash::make($request->password_nuevo),
+            'password'             => Hash::make($request->password_nuevo),
+            'debe_cambiar_password' => false,
         ]);
 
         return response()->json(['message' => 'Contraseña actualizada correctamente']);

@@ -94,15 +94,16 @@ class RegistroController extends Controller
         try {
             $postulante = DB::table('postulante')->where('ci', $request->ci)->first();
             if ($postulante && !$postulante->idusuario) {
-                $username = 'est_' . $request->ci;
+                $username = (string) $request->ci;
                 if (!DB::table('usuario')->where('nombre_usuario', $username)->exists()) {
                     $password = 'CUP' . strtoupper(Str::random(5));
                     DB::transaction(function () use ($postulante, $username, $password) {
                         $idUsuario = DB::table('usuario')->insertGetId([
-                            'nombre_usuario' => $username,
-                            'password'       => Hash::make($password),
-                            'email'          => $postulante->correo,
-                            'estado'         => 'ACTIVO',
+                            'nombre_usuario'       => $username,
+                            'password'             => Hash::make($password),
+                            'email'                => $postulante->correo,
+                            'estado'               => 'ACTIVO',
+                            'debe_cambiar_password' => true,
                         ], 'idusuario');
                         $rol = DB::table('roles')->where('nombre', 'ESTUDIANTE')->first();
                         if ($rol) {

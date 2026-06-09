@@ -19,6 +19,7 @@ import EstudianteDashboard    from './pages/EstudianteDashboard'
 import TipoInscripcion        from './pages/TipoInscripcion'
 import RegistroDocente        from './pages/RegistroDocente'
 import PostulacionesDocente   from './pages/PostulacionesDocente'
+import Bitacora               from './pages/Bitacora'
 
 function App() {
   return (
@@ -44,6 +45,7 @@ function App() {
         <Route path="/tipo-inscripcion"       element={<TipoInscripcion />} />
         <Route path="/postulacion-docente"    element={<RegistroDocente />} />
         <Route path="/postulaciones-docente"  element={<PostulacionesDocente />} />
+        <Route path="/bitacora"               element={<Bitacora />} />
       </Routes>
     </BrowserRouter>
   )

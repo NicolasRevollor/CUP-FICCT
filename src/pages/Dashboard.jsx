@@ -12,6 +12,7 @@ const MODULOS = [
   { icon: 'bi-person-badge',      title: 'Docentes',       desc: 'Gestión del personal docente',           ruta: '/docentes',            label: 'Abrir' },
   { icon: 'bi-person-badge-fill', title: 'Postulaciones',  desc: 'Postulaciones de docentes pendientes',   ruta: '/postulaciones-docente', label: 'Abrir' },
   { icon: 'bi-bar-chart',         title: 'Reportes',       desc: 'Estadísticas y reportes gerenciales',    ruta: '/reportes',      label: 'Abrir' },
+  { icon: 'bi-journal-text',      title: 'Bitácora',       desc: 'Registro de accesos al sistema',          ruta: '/bitacora',      label: 'Abrir', soloAdmin: true },
 ]
 
 function Dashboard() {
@@ -68,7 +69,7 @@ function Dashboard() {
         </div>
 
         <div className="module-grid">
-          {MODULOS.map(m => <ModuleCard key={m.ruta} m={m} />)}
+          {MODULOS.filter(m => !m.soloAdmin || usuario.rol === 'ADMINISTRADOR').map(m => <ModuleCard key={m.ruta} m={m} />)}
         </div>
 
       </div>

@@ -105,12 +105,16 @@ class PagoController extends Controller
 
         $password = 'CUP' . strtoupper(Str::random(5));
 
+        $emailUsuario = DB::table('usuario')->where('email', $postulante->correo)->exists()
+            ? $postulante->ci . '@cup.ficct.edu.bo'
+            : $postulante->correo;
+
         try {
-            DB::transaction(function () use ($postulante, $username, $password, $idPostulante) {
+            DB::transaction(function () use ($postulante, $username, $password, $idPostulante, $emailUsuario) {
                 $idUsuario = DB::table('usuario')->insertGetId([
                     'nombre_usuario'       => $username,
                     'password'             => Hash::make($password),
-                    'email'                => $postulante->correo,
+                    'email'                => $emailUsuario,
                     'estado'               => 'ACTIVO',
                     'debe_cambiar_password' => true,
                 ], 'idusuario');

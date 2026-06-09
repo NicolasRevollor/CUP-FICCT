@@ -94,24 +94,21 @@ class RegistroController extends Controller
         // Generar credenciales de acceso para el estudiante
         try {
             $postulante = DB::table('postulante')->where('ci', $request->ci)->first();
-            \Log::info('[CRED] postulante=' . ($postulante ? $postulante->idpostulante : 'NULL') . ' idusuario=' . ($postulante->idusuario ?? 'null'));
-
             if ($postulante && !$postulante->idusuario) {
                 $username = (string) $request->ci;
-                $existe   = DB::table('usuario')->where('nombre_usuario', $username)->exists();
-                \Log::info('[CRED] username=' . $username . ' existe=' . ($existe ? 'SI' : 'NO'));
-
-                if (!$existe) {
-                    $password = 'CUP' . strtoupper(Str::random(5));
-                    DB::transaction(function () use ($postulante, $username, $password) {
+                if (!DB::table('usuario')->where('nombre_usuario', $username)->exists()) {
+                    $password     = 'CUP' . strtoupper(Str::random(5));
+                    $emailUsuario = DB::table('usuario')->where('email', $postulante->correo)->exists()
+                        ? $postulante->ci . '@cup.ficct.edu.bo'
+                        : $postulante->correo;
+                    DB::transaction(function () use ($postulante, $username, $password, $emailUsuario) {
                         $idUsuario = DB::table('usuario')->insertGetId([
                             'nombre_usuario'       => $username,
                             'password'             => Hash::make($password),
-                            'email'                => $postulante->correo,
+                            'email'                => $emailUsuario,
                             'estado'               => 'ACTIVO',
                             'debe_cambiar_password' => true,
                         ], 'idusuario');
-                        \Log::info('[CRED] usuario creado id=' . $idUsuario);
                         $rol = DB::table('roles')->where('nombre', 'ESTUDIANTE')->first();
                         if ($rol) {
                             DB::table('usuario_roles')->insert([
@@ -123,20 +120,14 @@ class RegistroController extends Controller
                             ->where('idpostulante', $postulante->idpostulante)
                             ->update(['idusuario' => $idUsuario]);
                     });
-                    \Log::info('[CRED] transaccion ok, enviando email a ' . $postulante->correo);
                     Mail::to($postulante->correo)->send(new CredencialesEstudiante(
                         nombres:  $postulante->nombres,
                         username: $username,
                         password: $password,
                     ));
-                    \Log::info('[CRED] email enviado ok');
                 }
-            } else {
-                \Log::info('[CRED] saltado - postulante nulo o ya tiene idusuario');
             }
-        } catch (\Throwable $e) {
-            \Log::error('[CRED] ERROR: ' . $e->getMessage() . ' | ' . $e->getFile() . ':' . $e->getLine());
-        }
+        } catch (\Throwable) {}
 
         // Enviar correo de confirmación
         try {

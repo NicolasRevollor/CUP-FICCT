@@ -123,7 +123,9 @@ class RegistroController extends Controller
                     ));
                 }
             }
-        } catch (\Throwable) {}
+        } catch (\Throwable $e) {
+            \Log::error('Error generando credenciales estudiante: ' . $e->getMessage());
+        }
 
         // Enviar correo de confirmación
         try {

@@ -9,6 +9,7 @@ use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Str;
 use App\Mail\RegistroConfirmacion;
 use App\Mail\CredencialesEstudiante;
+use Illuminate\Support\Facades\Log;
 use Stripe\StripeClient;
 
 class RegistroController extends Controller
@@ -93,9 +94,14 @@ class RegistroController extends Controller
         // Generar credenciales de acceso para el estudiante
         try {
             $postulante = DB::table('postulante')->where('ci', $request->ci)->first();
+            \Log::info('[CRED] postulante=' . ($postulante ? $postulante->idpostulante : 'NULL') . ' idusuario=' . ($postulante->idusuario ?? 'null'));
+
             if ($postulante && !$postulante->idusuario) {
                 $username = (string) $request->ci;
-                if (!DB::table('usuario')->where('nombre_usuario', $username)->exists()) {
+                $existe   = DB::table('usuario')->where('nombre_usuario', $username)->exists();
+                \Log::info('[CRED] username=' . $username . ' existe=' . ($existe ? 'SI' : 'NO'));
+
+                if (!$existe) {
                     $password = 'CUP' . strtoupper(Str::random(5));
                     DB::transaction(function () use ($postulante, $username, $password) {
                         $idUsuario = DB::table('usuario')->insertGetId([
@@ -105,6 +111,7 @@ class RegistroController extends Controller
                             'estado'               => 'ACTIVO',
                             'debe_cambiar_password' => true,
                         ], 'idusuario');
+                        \Log::info('[CRED] usuario creado id=' . $idUsuario);
                         $rol = DB::table('roles')->where('nombre', 'ESTUDIANTE')->first();
                         if ($rol) {
                             DB::table('usuario_roles')->insert([
@@ -116,15 +123,19 @@ class RegistroController extends Controller
                             ->where('idpostulante', $postulante->idpostulante)
                             ->update(['idusuario' => $idUsuario]);
                     });
-                    Mail::to($request->correo)->send(new CredencialesEstudiante(
-                        nombres:  $request->nombres,
+                    \Log::info('[CRED] transaccion ok, enviando email a ' . $postulante->correo);
+                    Mail::to($postulante->correo)->send(new CredencialesEstudiante(
+                        nombres:  $postulante->nombres,
                         username: $username,
                         password: $password,
                     ));
+                    \Log::info('[CRED] email enviado ok');
                 }
+            } else {
+                \Log::info('[CRED] saltado - postulante nulo o ya tiene idusuario');
             }
         } catch (\Throwable $e) {
-            \Log::error('Error generando credenciales estudiante: ' . $e->getMessage());
+            \Log::error('[CRED] ERROR: ' . $e->getMessage() . ' | ' . $e->getFile() . ':' . $e->getLine());
         }
 
         // Enviar correo de confirmación

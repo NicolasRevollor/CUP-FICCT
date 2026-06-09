@@ -55,7 +55,7 @@ function Login() {
   }
 
   const fechas = [
-    { evento: 'Semestre I - 2024',        fecha: '15 Ene – 30 Ene' },
+    { evento: 'Semestre I - 2027',        fecha: '15 Ene – 30 Ene' },
     { evento: 'Exámenes de Suficiencia',  fecha: '05 Feb – 12 Feb' },
     { evento: 'Cursos de Verano',         fecha: 'Terminado'       },
   ]

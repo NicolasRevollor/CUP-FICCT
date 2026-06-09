@@ -4,8 +4,11 @@ namespace App\Http\Controllers;
 
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Mail;
+use Illuminate\Support\Str;
 use App\Mail\RegistroConfirmacion;
+use App\Mail\CredencialesEstudiante;
 use Stripe\StripeClient;
 
 class RegistroController extends Controller
@@ -86,6 +89,40 @@ class RegistroController extends Controller
         } catch (\Throwable $e) {
             return response()->json(['message' => $e->getMessage()], 500);
         }
+
+        // Generar credenciales de acceso para el estudiante
+        try {
+            $postulante = DB::table('postulante')->where('ci', $request->ci)->first();
+            if ($postulante && !$postulante->idusuario) {
+                $username = 'est_' . $request->ci;
+                if (!DB::table('usuario')->where('nombre_usuario', $username)->exists()) {
+                    $password = 'CUP' . strtoupper(Str::random(5));
+                    DB::transaction(function () use ($postulante, $username, $password) {
+                        $idUsuario = DB::table('usuario')->insertGetId([
+                            'nombre_usuario' => $username,
+                            'password'       => Hash::make($password),
+                            'email'          => $postulante->correo,
+                            'estado'         => 'ACTIVO',
+                        ], 'idusuario');
+                        $rol = DB::table('roles')->where('nombre', 'ESTUDIANTE')->first();
+                        if ($rol) {
+                            DB::table('usuario_roles')->insert([
+                                'idusuario' => $idUsuario,
+                                'idrol'     => $rol->idrol,
+                            ]);
+                        }
+                        DB::table('postulante')
+                            ->where('idpostulante', $postulante->idpostulante)
+                            ->update(['idusuario' => $idUsuario]);
+                    });
+                    Mail::to($request->correo)->send(new CredencialesEstudiante(
+                        nombres:  $request->nombres,
+                        username: $username,
+                        password: $password,
+                    ));
+                }
+            }
+        } catch (\Throwable) {}
 
         // Enviar correo de confirmación
         try {

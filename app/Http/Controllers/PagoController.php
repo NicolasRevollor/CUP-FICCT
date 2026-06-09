@@ -4,6 +4,10 @@ namespace App\Http\Controllers;
 
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\Mail;
+use Illuminate\Support\Str;
+use App\Mail\CredencialesEstudiante;
 
 class PagoController extends Controller
 {
@@ -62,6 +66,10 @@ class PagoController extends Controller
             'estadopago'       => $request->estadopago,
         ], 'idpagos');
 
+        if ($request->estadopago === 'CONFIRMADO') {
+            $this->generarCredenciales($request->idpostulante);
+        }
+
         return response()->json(['message' => 'Pago registrado correctamente', 'idpagos' => $id], 201);
     }
 
@@ -80,6 +88,52 @@ class PagoController extends Controller
             'estadopago' => $request->estadopago,
         ]);
 
+        if ($request->estadopago === 'CONFIRMADO' && $pago->estadopago !== 'CONFIRMADO') {
+            $this->generarCredenciales($pago->idpostulante);
+        }
+
         return response()->json(['message' => 'Estado del pago actualizado correctamente']);
+    }
+
+    private function generarCredenciales(int $idPostulante): void
+    {
+        $postulante = DB::table('postulante')->where('idpostulante', $idPostulante)->first();
+        if (!$postulante || $postulante->idusuario) return;
+
+        $username = 'est_' . $postulante->ci;
+        if (DB::table('usuario')->where('nombre_usuario', $username)->exists()) return;
+
+        $password = 'CUP' . strtoupper(Str::random(5));
+
+        try {
+            DB::transaction(function () use ($postulante, $username, $password, $idPostulante) {
+                $idUsuario = DB::table('usuario')->insertGetId([
+                    'nombre_usuario' => $username,
+                    'password'       => Hash::make($password),
+                    'email'          => $postulante->correo,
+                    'estado'         => 'ACTIVO',
+                ], 'idusuario');
+
+                $rol = DB::table('roles')->where('nombre', 'ESTUDIANTE')->first();
+                if ($rol) {
+                    DB::table('usuario_roles')->insert([
+                        'idusuario' => $idUsuario,
+                        'idrol'     => $rol->idrol,
+                    ]);
+                }
+
+                DB::table('postulante')
+                    ->where('idpostulante', $idPostulante)
+                    ->update(['idusuario' => $idUsuario]);
+            });
+
+            Mail::to($postulante->correo)->send(new CredencialesEstudiante(
+                nombres:  $postulante->nombres,
+                username: $username,
+                password: $password,
+            ));
+        } catch (\Throwable) {
+            // No interrumpir el flujo si falla la generación de credenciales
+        }
     }
 }

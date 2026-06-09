@@ -11,6 +11,7 @@ use App\Http\Controllers\DocenteController;
 use App\Http\Controllers\PagoController;
 use App\Http\Controllers\InscripcionController;
 use App\Http\Controllers\RegistroController;
+use App\Http\Controllers\EstudianteController;
 
 // ── Rutas públicas ───────────────────────────────────────────
 Route::post('/login',                    [AuthController::class,    'login']);
@@ -70,6 +71,13 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::get('/inscripciones/postulante/{id}', [InscripcionController::class, 'porPostulante']);
     Route::post('/inscripciones',                [InscripcionController::class, 'store']);
     Route::put('/inscripciones/{id}',            [InscripcionController::class, 'update']);
+
+    // Estudiante
+    Route::get('/estudiante/perfil',      [EstudianteController::class, 'perfil']);
+    Route::get('/estudiante/grupo',       [EstudianteController::class, 'miGrupo']);
+    Route::get('/estudiante/examenes',    [EstudianteController::class, 'misExamenes']);
+    Route::get('/estudiante/asistencia',  [EstudianteController::class, 'miAsistencia']);
+    Route::post('/estudiante/foto',       [EstudianteController::class, 'subirFoto']);
 
     // Reportes
     Route::get('/reportes/dashboard',            [ReporteController::class, 'dashboard']);

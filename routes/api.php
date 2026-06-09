@@ -11,6 +11,7 @@ use App\Http\Controllers\DocenteController;
 use App\Http\Controllers\PagoController;
 use App\Http\Controllers\InscripcionController;
 use App\Http\Controllers\RegistroController;
+use App\Http\Controllers\PostulacionDocenteController;
 use App\Http\Controllers\EstudianteController;
 
 // ── Rutas públicas ───────────────────────────────────────────
@@ -18,6 +19,7 @@ Route::post('/login',                    [AuthController::class,    'login']);
 Route::post('/recuperar-password',       [AuthController::class,    'recuperarPassword']);
 Route::post('/registro/intent',          [RegistroController::class,'crearIntent']);
 Route::post('/registro',                 [RegistroController::class,'registrar']);
+Route::post('/postulacion-docente',      [PostulacionDocenteController::class,'store']);
 
 // ── Rutas protegidas ─────────────────────────────────────────
 Route::middleware('auth:sanctum')->group(function () {
@@ -78,6 +80,12 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::get('/estudiante/examenes',    [EstudianteController::class, 'misExamenes']);
     Route::get('/estudiante/asistencia',  [EstudianteController::class, 'miAsistencia']);
     Route::post('/estudiante/foto',       [EstudianteController::class, 'subirFoto']);
+
+    // Postulaciones docente (admin)
+    Route::get('/postulacion-docente',                              [PostulacionDocenteController::class, 'index']);
+    Route::get('/postulacion-docente/{id}',                        [PostulacionDocenteController::class, 'show']);
+    Route::put('/postulacion-docente/{id}',                        [PostulacionDocenteController::class, 'update']);
+    Route::get('/postulacion-docente/{idPostulacion}/documentos/{idDocumento}', [PostulacionDocenteController::class, 'descargarDocumento']);
 
     // Reportes
     Route::get('/reportes/dashboard',            [ReporteController::class, 'dashboard']);

@@ -88,11 +88,21 @@ return [
             'retry_after' => 60,
         ],
 
+        'gmail2' => [
+            'transport' => 'smtp',
+            'host' => 'smtp.gmail.com',
+            'port' => env('MAIL_PORT_2', 587),
+            'scheme' => env('MAIL_SCHEME_2', 'tls'),
+            'username' => env('MAIL_USERNAME_2'),
+            'password' => env('MAIL_PASSWORD_2'),
+            'timeout' => null,
+        ],
+
         'roundrobin' => [
             'transport' => 'roundrobin',
             'mailers' => [
-                'ses',
-                'postmark',
+                'smtp',
+                'gmail2',
             ],
             'retry_after' => 60,
         ],

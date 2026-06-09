@@ -5,6 +5,13 @@ namespace App\Http\Controllers;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 
+/**
+ * CU-05 — Control de pagos
+ * Registra y gestiona los pagos de postulantes.
+ * Almacena monto, fecha, método (EFECTIVO/TRANSFERENCIA/QR/DEPOSITO),
+ * código de transacción y estado (PENDIENTE/CONFIRMADO/RECHAZADO).
+ * Un pago en estado CONFIRMADO es requisito para registrar la inscripción (CU-04).
+ */
 class PagoController extends Controller
 {
     public function index()

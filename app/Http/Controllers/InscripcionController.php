@@ -9,6 +9,14 @@ use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Str;
 use App\Mail\CredencialesEstudiante;
 
+/**
+ * CU-04 — Inscripción de postulantes
+ * Registra la inscripción formal de un postulante vinculando idpostulante + idgestion + idpago.
+ * Requiere que el postulante tenga un pago en estado CONFIRMADO antes de inscribirse.
+ * Al confirmar la inscripción genera credenciales de acceso (rol ESTUDIANTE) y las envía por correo.
+ * NOTA: la lógica de selección de carrera (1ra y 2da opción) está en ReporteController::admision,
+ * no en este controlador.
+ */
 class InscripcionController extends Controller
 {
     public function index()

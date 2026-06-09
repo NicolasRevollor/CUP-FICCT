@@ -5,6 +5,15 @@ namespace App\Http\Controllers;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 
+/**
+ * CU-06 — Registro de notas por materia
+ * Registra y actualiza las tres notas (nota1, nota2, nota3) de un postulante por materia.
+ * El promedio y estado (APROBADO/REPROBADO) son calculados automáticamente por TRIGGER 1.
+ * El promedio_final del postulante y su estadopostulante son actualizados por TRIGGER 2.
+ * Las materias disponibles se gestionan en MateriaController.
+ * IMPORTANTE: verificar que los nombres en la tabla materia coincidan con los definidos
+ * en el plan de estudios del programa (generalmente: Matemáticas, Física, Inglés, Computación).
+ */
 class ExamenController extends Controller
 {
     public function index(int $idPostulante)

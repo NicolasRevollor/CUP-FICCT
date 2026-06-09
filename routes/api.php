@@ -14,6 +14,10 @@ use App\Http\Controllers\RegistroController;
 use App\Http\Controllers\PostulacionDocenteController;
 use App\Http\Controllers\EstudianteController;
 use App\Http\Controllers\BitacoraController;
+use App\Http\Controllers\UsuarioController;
+use App\Http\Controllers\AsistenciaController;
+use App\Http\Controllers\AulaController;
+use App\Http\Controllers\CargaMasivaController;
 
 // ── Rutas públicas ───────────────────────────────────────────
 Route::post('/login',                    [AuthController::class,    'login']);
@@ -88,8 +92,38 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::put('/postulacion-docente/{id}',                        [PostulacionDocenteController::class, 'update']);
     Route::get('/postulacion-docente/{idPostulacion}/documentos/{idDocumento}', [PostulacionDocenteController::class, 'descargarDocumento']);
 
-    // Bitácora (solo ADMINISTRADOR)
+    // Bitácora — CU acceso al sistema (solo ADMINISTRADOR)
     Route::get('/bitacora', [BitacoraController::class, 'index']);
+
+    // Usuarios — CU-14
+    Route::get('/usuarios',          [UsuarioController::class, 'index']);
+    Route::get('/usuarios/roles',    [UsuarioController::class, 'roles']);
+    Route::get('/usuarios/{id}',     [UsuarioController::class, 'show']);
+    Route::post('/usuarios',         [UsuarioController::class, 'store']);
+    Route::put('/usuarios/{id}',     [UsuarioController::class, 'update']);
+    Route::delete('/usuarios/{id}',  [UsuarioController::class, 'destroy']);
+
+    // Asistencia — CU-13
+    Route::get('/asistencia/grupo/{idGrupo}',        [AsistenciaController::class, 'porGrupo']);
+    Route::get('/asistencia/postulante/{idPostulante}', [AsistenciaController::class, 'porPostulante']);
+    Route::post('/asistencia',                        [AsistenciaController::class, 'store']);
+    Route::put('/asistencia/{id}',                    [AsistenciaController::class, 'update']);
+
+    // Aulas y horarios — CU-12
+    Route::get('/aulas',               [AulaController::class, 'index']);
+    Route::post('/aulas',              [AulaController::class, 'store']);
+    Route::put('/aulas/{id}',          [AulaController::class, 'update']);
+    Route::delete('/aulas/{id}',       [AulaController::class, 'destroy']);
+    Route::get('/horarios',            [AulaController::class, 'horarios']);
+    Route::post('/horarios',           [AulaController::class, 'storeHorario']);
+    Route::put('/horarios/{id}',       [AulaController::class, 'updateHorario']);
+
+    // Docentes — asignación a grupos (CU-11)
+    Route::post('/docentes/{id}/asignar-grupo',              [DocenteController::class, 'asignarGrupo']);
+    Route::delete('/docentes/{id}/asignaciones/{idAsignacion}', [DocenteController::class, 'desasignarGrupo']);
+
+    // Carga masiva — CU-15
+    Route::post('/carga-masiva/postulantes', [CargaMasivaController::class, 'importarPostulantes']);
 
     // Reportes
     Route::get('/reportes/dashboard',            [ReporteController::class, 'dashboard']);
@@ -98,6 +132,7 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::get('/reportes/reprobados',           [ReporteController::class, 'reprobados']);
     Route::get('/reportes/estadisticas-materia', [ReporteController::class, 'estadisticasMateria']);
     Route::get('/reportes/grupos-aprobados',     [ReporteController::class, 'gruposAprobados']);
+    Route::get('/reportes/docentes-por-grupo',  [ReporteController::class, 'docentesPorGrupo']);
     Route::post('/reportes/admision',            [ReporteController::class, 'admision']);
     Route::get('/reportes/admision',             [ReporteController::class, 'reporteAdmision']);
 });

@@ -5,6 +5,16 @@ namespace App\Http\Controllers;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 
+/**
+ * CU-08 — Registro y gestión de docentes
+ * CRUD sobre la tabla docente. Al crear un docente le asigna automáticamente el rol DOCENTE.
+ * Almacena profesión, maestría y diplomado en Ed. Superior para referencia, pero
+ * NO valida automáticamente que cumplan los requisitos — la verificación es manual.
+ *
+ * CU-11 — Asignación de docentes a grupos (máx. 4 grupos activos por docente)
+ * asignarGrupo / desasignarGrupo gestionan la tabla docentegrupomateria.
+ * Se valida que el docente no supere 4 grupos activos simultáneos.
+ */
 class DocenteController extends Controller
 {
     public function index()
@@ -152,6 +162,78 @@ class DocenteController extends Controller
         ]);
 
         return response()->json(['message' => 'Docente actualizado correctamente']);
+    }
+
+    // CU-11: asignar docente a un grupo/materia — máximo 4 grupos activos
+    public function asignarGrupo(Request $request, int $id)
+    {
+        $docente = DB::table('docente')->where('iddocente', $id)->first();
+        if (!$docente) {
+            return response()->json(['message' => 'Docente no encontrado'], 404);
+        }
+
+        $request->validate([
+            'idgrupo'   => 'required|integer',
+            'idmateria' => 'required|integer',
+        ]);
+
+        // Validar límite de 4 grupos activos por docente
+        $gruposActivos = DB::table('docentegrupomateria')
+            ->where('iddocente', $id)
+            ->where('estado', 'ACTIVO')
+            ->count();
+
+        if ($gruposActivos >= 4) {
+            return response()->json([
+                'message' => 'El docente ya tiene 4 grupos activos asignados (máximo permitido)',
+            ], 400);
+        }
+
+        // Verificar que el grupo y la materia existan
+        $grupo   = DB::table('grupos')->where('idgrupo', $request->idgrupo)->first();
+        $materia = DB::table('materia')->where('idmateria', $request->idmateria)->first();
+        if (!$grupo)   return response()->json(['message' => 'Grupo no encontrado'], 404);
+        if (!$materia) return response()->json(['message' => 'Materia no encontrada'], 404);
+
+        // Evitar duplicado activo
+        $existe = DB::table('docentegrupomateria')
+            ->where('iddocente',  $id)
+            ->where('idgrupo',    $request->idgrupo)
+            ->where('idmateria',  $request->idmateria)
+            ->where('estado',     'ACTIVO')
+            ->exists();
+
+        if ($existe) {
+            return response()->json(['message' => 'El docente ya está asignado a ese grupo/materia'], 400);
+        }
+
+        DB::table('docentegrupomateria')->insert([
+            'iddocente'  => $id,
+            'idgrupo'    => $request->idgrupo,
+            'idmateria'  => $request->idmateria,
+            'estado'     => 'ACTIVO',
+        ]);
+
+        return response()->json(['message' => 'Docente asignado al grupo correctamente'], 201);
+    }
+
+    // CU-11: desasignar docente de un grupo/materia
+    public function desasignarGrupo(int $id, int $idAsignacion)
+    {
+        $asignacion = DB::table('docentegrupomateria')
+            ->where('idasignacion', $idAsignacion)
+            ->where('iddocente', $id)
+            ->first();
+
+        if (!$asignacion) {
+            return response()->json(['message' => 'Asignación no encontrada'], 404);
+        }
+
+        DB::table('docentegrupomateria')
+            ->where('idasignacion', $idAsignacion)
+            ->update(['estado' => 'INACTIVO']);
+
+        return response()->json(['message' => 'Docente desasignado del grupo correctamente']);
     }
 
     public function destroy(int $id)

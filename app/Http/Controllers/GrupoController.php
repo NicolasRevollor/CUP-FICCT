@@ -5,6 +5,22 @@ namespace App\Http\Controllers;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 
+/**
+ * CU-09 — Gestión de grupos
+ * Lista grupos existentes (con aula y horario via JOIN) y permite asignar/retirar postulantes.
+ * Los grupos NO se crean desde la app — se insertan directamente en BD.
+ * La capacidad máxima se respeta: no se permite asignar si el grupo ya está lleno.
+ *
+ * CU-10 — Asignación de postulantes a grupos
+ * La asignación es manual: el funcionario elige el grupo para cada postulante.
+ * NO existe cálculo automático de grupos necesarios.
+ * TRIGGER 4 (AFTER INSERT en grupopostulantes) incrementa cantidadestudiante automáticamente.
+ *
+ * CU-07 — Triggers de PostgreSQL (referencia)
+ * T1: BEFORE INSERT/UPDATE en examen → calcula promedio y estado.
+ * T2: AFTER INSERT/UPDATE en examen  → actualiza promedio_final y estadopostulante del postulante.
+ * T4: AFTER INSERT en grupopostulantes → incrementa cantidadestudiante en grupos.
+ */
 class GrupoController extends Controller
 {
     public function index()

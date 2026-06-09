@@ -5,6 +5,13 @@ namespace App\Http\Controllers;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 
+/**
+ * CU-03 — Registro y gestión de postulantes
+ * CRUD completo sobre la tabla postulante.
+ * Permite registrar, buscar (por CI o nombre), ver, actualizar y eliminar postulantes.
+ * El estado inicial es PENDIENTE; los triggers de PostgreSQL lo actualizan a
+ * APROBADO o REPROBADO al registrar notas.
+ */
 class PostulanteController extends Controller
 {
     // Listar todos los postulantes

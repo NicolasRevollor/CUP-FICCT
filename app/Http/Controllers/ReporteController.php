@@ -4,6 +4,12 @@ namespace App\Http\Controllers;
 
 use Illuminate\Support\Facades\DB;
 
+/**
+ * CU-16 — Reportes y estadísticas
+ * Implementados: lista general, aprobados, reprobados, estadísticas por materia,
+ * grupos con aprobados, admisión por cupos (1ra y 2da opción de carrera), reporte de admitidos.
+ * También incluye: docentes por grupo (docentesPorGrupo).
+ */
 class ReporteController extends Controller
 {
     // Dashboard estadísticas reales
@@ -98,6 +104,29 @@ class ReporteController extends Controller
 
         return response()->json($grupos);
     }
+    // Docentes asignados por grupo (CU-16 faltante)
+    public function docentesPorGrupo()
+    {
+        $resultado = DB::table('docentegrupomateria as dgm')
+            ->join('docente as d',  'd.iddocente',  '=', 'dgm.iddocente')
+            ->join('grupos as g',   'g.idgrupo',    '=', 'dgm.idgrupo')
+            ->join('materia as m',  'm.idmateria',  '=', 'dgm.idmateria')
+            ->where('dgm.estado', 'ACTIVO')
+            ->select(
+                'g.idgrupo',
+                'g.nombregrupo',
+                'g.turno',
+                'd.iddocente',
+                DB::raw("d.nombres || ' ' || d.apellidos as docente"),
+                'm.nombre as materia'
+            )
+            ->orderBy('g.idgrupo')
+            ->orderBy('m.idmateria')
+            ->get();
+
+        return response()->json($resultado);
+    }
+
     // Lógica de admisión por cupos y promedio
 public function admision()
 {
@@ -107,9 +136,6 @@ public function admision()
     $resultado = [];
 
     foreach ($carreras as $carrera) {
-        $cupo = $carrera->cupomaximo;
-        $admitidos = 0;
-
         // Obtener aprobados que eligieron esta carrera como 1ra opción
         // ordenados por promedio de mayor a menor
         $postulantes1ra = DB::table('postulante as p')

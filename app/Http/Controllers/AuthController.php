@@ -11,6 +11,16 @@ use Illuminate\Support\Str;
 use App\Models\Usuario;
 use App\Mail\RecuperarPassword;
 
+/**
+ * CU-01 — Inicio de sesión
+ * Autentica usuarios con nombre_usuario + password (bcrypt o MD5 legado con migración automática).
+ * Bloquea la cuenta temporalmente tras 3 intentos fallidos (3 → 5 → 10 min).
+ * Emite tokens Sanctum. Registra cada intento en la bitácora.
+ *
+ * CU-02 — Cambio y recuperación de contraseña
+ * - cambiarPassword: el usuario autenticado cambia su propia contraseña.
+ * - recuperarPassword: genera una contraseña temporal y la envía por correo (respuesta genérica).
+ */
 class AuthController extends Controller
 {
     private function cacheKey(string $username): string
@@ -51,7 +61,7 @@ class AuthController extends Controller
             if (Hash::check($request->Password, $usuario->password)) {
                 $passwordValida = true;
             }
-        } catch (\RuntimeException $e) {
+        } catch (\RuntimeException) {
             // Hash no es bcrypt — verificar MD5 abajo
         }
 

@@ -33,7 +33,6 @@ class GestionController extends Controller
         $id = DB::table('gestion')->insertGetId([
             'anio'    => $request->anio,
             'periodo' => $request->periodo,
-            'activo'  => $request->boolean('activo', true),
         ], 'idgestion');
 
         return response()->json(['message' => 'Gestión creada correctamente', 'idgestion' => $id], 201);
@@ -52,11 +51,13 @@ class GestionController extends Controller
             'activo'  => 'sometimes|boolean',
         ]);
 
-        DB::table('gestion')->where('idgestion', $id)->update(array_filter([
-            'anio'    => $request->anio,
-            'periodo' => $request->periodo,
-            'activo'  => $request->has('activo') ? $request->boolean('activo') : null,
-        ], fn($v) => $v !== null));
+        $datos = [];
+        if ($request->has('anio'))    $datos['anio']    = $request->anio;
+        if ($request->has('periodo')) $datos['periodo'] = $request->periodo;
+
+        if (!empty($datos)) {
+            DB::table('gestion')->where('idgestion', $id)->update($datos);
+        }
 
         return response()->json(['message' => 'Gestión actualizada correctamente']);
     }

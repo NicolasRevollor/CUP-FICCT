@@ -14,7 +14,6 @@ return new class extends Migration
                     idgestion SERIAL PRIMARY KEY,
                     anio      INTEGER      NOT NULL,
                     periodo   VARCHAR(20)  NOT NULL,
-                    activo    BOOLEAN      NOT NULL DEFAULT TRUE,
                     UNIQUE (anio, periodo)
                 )
             ');

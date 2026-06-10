@@ -116,7 +116,7 @@ function Inscripciones() {
 
         <div className="alert alert-info" style={{ fontSize: 13 }}>
           <i className="bi bi-info-circle"></i>
-          Para inscribir un postulante, primero debe tener un pago con estado <strong>CONFIRMADO</strong> en el módulo de Pagos.
+          Los postulantes aparecen aquí automáticamente al completar su pago con Stripe. Confirmá la inscripción para aprobar su solicitud y enviarle las credenciales de acceso por correo.
         </div>
 
         <div className="card">

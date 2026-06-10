@@ -20,6 +20,10 @@ import TipoInscripcion        from './pages/TipoInscripcion'
 import RegistroDocente        from './pages/RegistroDocente'
 import PostulacionesDocente   from './pages/PostulacionesDocente'
 import Bitacora               from './pages/Bitacora'
+import Usuarios               from './pages/Usuarios'
+import CargaMasiva            from './pages/CargaMasiva'
+import Aulas                  from './pages/Aulas'
+import Asistencia             from './pages/Asistencia'
 
 function App() {
   return (
@@ -46,6 +50,10 @@ function App() {
         <Route path="/postulacion-docente"    element={<RegistroDocente />} />
         <Route path="/postulaciones-docente"  element={<PostulacionesDocente />} />
         <Route path="/bitacora"               element={<Bitacora />} />
+        <Route path="/usuarios"               element={<Usuarios />} />
+        <Route path="/carga-masiva"           element={<CargaMasiva />} />
+        <Route path="/aulas"                  element={<Aulas />} />
+        <Route path="/asistencia"             element={<Asistencia />} />
       </Routes>
     </BrowserRouter>
   )

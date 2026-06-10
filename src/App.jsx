@@ -24,6 +24,7 @@ import Usuarios               from './pages/Usuarios'
 import CargaMasiva            from './pages/CargaMasiva'
 import Aulas                  from './pages/Aulas'
 import Asistencia             from './pages/Asistencia'
+import Gestiones             from './pages/Gestiones'
 
 function App() {
   return (
@@ -54,6 +55,7 @@ function App() {
         <Route path="/carga-masiva"           element={<CargaMasiva />} />
         <Route path="/aulas"                  element={<Aulas />} />
         <Route path="/asistencia"             element={<Asistencia />} />
+        <Route path="/gestiones"              element={<Gestiones />} />
       </Routes>
     </BrowserRouter>
   )

@@ -16,6 +16,7 @@ const MODULOS = [
   { icon: 'bi-people-fill',       title: 'Usuarios',       desc: 'Gestión de usuarios y roles',             ruta: '/usuarios',      label: 'Abrir', soloAdmin: true },
   { icon: 'bi-cloud-upload',      title: 'Carga masiva',   desc: 'Importar postulantes desde CSV',          ruta: '/carga-masiva',  label: 'Abrir', soloAdmin: true },
   { icon: 'bi-building',          title: 'Aulas',          desc: 'Gestión de aulas y horarios',             ruta: '/aulas',         label: 'Abrir', soloAdmin: true },
+  { icon: 'bi-calendar3',         title: 'Gestiones',      desc: 'Períodos y gestiones académicas',          ruta: '/gestiones',     label: 'Abrir', soloAdmin: true },
   { icon: 'bi-calendar-check',    title: 'Asistencia',     desc: 'Registro de asistencia por grupo',        ruta: '/asistencia',    label: 'Abrir' },
 ]
 

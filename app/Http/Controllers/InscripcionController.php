@@ -107,11 +107,6 @@ class InscripcionController extends Controller
             'gestion'           => $request->idgestion,
         ]);
 
-        // Actualizar estado del postulante a INSCRITO
-        DB::table('postulante')
-            ->where('idpostulante', $request->idpostulante)
-            ->update(['estadopostulante' => 'INSCRITO']);
-
         return response()->json(['message' => 'Inscripción registrada correctamente'], 201);
     }
 
@@ -132,6 +127,15 @@ class InscripcionController extends Controller
 
         if ($request->estadoinscripcion === 'CONFIRMADA' && $inscripcion->estadoinscripcion !== 'CONFIRMADA') {
             $this->generarCredenciales($inscripcion->idpostulante);
+            DB::table('postulante')
+                ->where('idpostulante', $inscripcion->idpostulante)
+                ->update(['estadopostulante' => 'INSCRITO']);
+        }
+
+        if ($request->estadoinscripcion === 'ANULADA') {
+            DB::table('postulante')
+                ->where('idpostulante', $inscripcion->idpostulante)
+                ->update(['estadopostulante' => 'PENDIENTE']);
         }
 
         return response()->json(['message' => 'Inscripción actualizada correctamente']);

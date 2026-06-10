@@ -4,10 +4,16 @@ namespace App\Http\Controllers;
 
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Facades\Mail;
-use App\Mail\RegistroConfirmacion;
 use Stripe\StripeClient;
 
+/**
+ * CU-01 Registro público de postulantes.
+ * Flujo:
+ *   1. crearIntent  → crea un PaymentIntent en Stripe y devuelve el clientSecret al frontend.
+ *   2. registrar    → el frontend confirma el pago con Stripe y luego llama a este endpoint;
+ *                     verifica que el PaymentIntent haya tenido éxito y crea el postulante
+ *                     + pago PENDIENTE (el admin aún debe aprobar la inscripción).
+ */
 class RegistroController extends Controller
 {
     private function stripe(): StripeClient
@@ -15,40 +21,45 @@ class RegistroController extends Controller
         return new StripeClient(env('STRIPE_SECRET_KEY'));
     }
 
-    // Crear intento de pago (público)
+    // Paso 1: crear intento de pago (público)
     public function crearIntent(Request $request)
     {
         $request->validate(['monto' => 'required|numeric|min:1']);
 
         $intent = $this->stripe()->paymentIntents->create([
-            'amount'                     => (int) ($request->monto * 100),
-            'currency'                   => 'usd',
-            'automatic_payment_methods'  => ['enabled' => true],
+            'amount'                    => (int) ($request->monto * 100),
+            'currency'                  => 'usd',
+            'automatic_payment_methods' => ['enabled' => true],
         ]);
 
         return response()->json(['clientSecret' => $intent->client_secret]);
     }
 
-    // Registrar postulante + confirmar pago (público)
+    // Paso 2: verificar pago y registrar postulante (público)
     public function registrar(Request $request)
     {
         $request->validate([
-            'ci'               => 'required|unique:postulante,ci',
-            'nombres'          => 'required',
-            'apellidos'        => 'required',
-            'sexo'             => 'required|in:M,F',
-            'correo'           => 'required|email|unique:postulante,correo',
-            'tituloBachiller'  => 'required|boolean',
-            'paymentIntentId'  => 'required|string',
-            'monto'            => 'required|numeric|min:0',
-            'metodoPago'       => 'required|string',
+            'ci'                => 'required|unique:postulante,ci',
+            'nombres'           => 'required',
+            'apellidos'         => 'required',
+            'sexo'              => 'required|in:M,F',
+            'correo'            => 'required|email|unique:postulante,correo',
+            'paymentIntentId'   => 'required|string',
+            'monto'             => 'required|numeric|min:0',
+            'metodoPago'        => 'nullable|string',
+            'telefono'          => 'nullable|string',
+            'direccion'         => 'nullable|string',
+            'colegioProcedencia'=> 'nullable|string',
+            'ciudad'            => 'nullable|string',
+            'tituloBachiller'   => 'nullable|boolean',
+            'otrosRequisitos'   => 'nullable|string',
         ]);
 
-        // Verificar pago con Stripe
+        // Verificar con Stripe que el pago realmente se realizó
         try {
             $intent = $this->stripe()->paymentIntents->retrieve($request->paymentIntentId);
             if ($intent->status !== 'succeeded') {
-                return response()->json(['message' => 'El pago no fue confirmado. Intente de nuevo.'], 400);
+                return response()->json(['message' => 'El pago no fue confirmado por Stripe. Intentá de nuevo.'], 400);
             }
         } catch (\Exception $e) {
             return response()->json(['message' => 'Error al verificar el pago: ' . $e->getMessage()], 400);
@@ -56,7 +67,6 @@ class RegistroController extends Controller
 
         try {
             DB::transaction(function () use ($request) {
-                // Crear postulante
                 $idPostulante = DB::table('postulante')->insertGetId([
                     'ci'                 => $request->ci,
                     'nombres'            => $request->nombres,
@@ -73,35 +83,34 @@ class RegistroController extends Controller
                     'promedio_final'     => 0,
                 ], 'idpostulante');
 
-                // Registrar pago confirmado
-                DB::table('pagos')->insert([
+                // Stripe ya verificó el pago → queda CONFIRMADO directamente
+                $idPago = DB::table('pagos')->insertGetId([
                     'idpostulante'     => $idPostulante,
                     'monto'            => $request->monto,
                     'fechapago'        => now(),
-                    'metodopago'       => 'TRANSFERENCIA',
+                    'metodopago'       => 'STRIPE',
                     'codgotransaccion' => $request->paymentIntentId,
                     'estadopago'       => 'CONFIRMADO',
-                ]);
+                ], 'idpagos');
+
+                // Crear inscripción PENDIENTE automáticamente para que aparezca en el módulo
+                $gestion = DB::table('gestion')->orderBy('idgestion', 'desc')->first();
+                if ($gestion) {
+                    DB::table('inscripcion')->insert([
+                        'idpostulante'      => $idPostulante,
+                        'idpago'            => $idPago,
+                        'fechainscripcion'  => now(),
+                        'estadoinscripcion' => 'PENDIENTE',
+                        'gestion'           => $gestion->idgestion,
+                    ]);
+                }
             });
         } catch (\Throwable $e) {
             return response()->json(['message' => $e->getMessage()], 500);
         }
 
-        // Enviar correo de confirmación
-        try {
-            Mail::to($request->correo)->send(new RegistroConfirmacion(
-                nombres:   $request->nombres,
-                apellidos: $request->apellidos,
-                ci:        $request->ci,
-                correo:    $request->correo,
-                monto:     $request->monto,
-            ));
-        } catch (\Throwable $e) {
-            // No fallar el registro si el correo falla
-        }
-
         return response()->json([
-            'message'  => 'Registro completado correctamente',
+            'message'    => 'Pago recibido. Tu solicitud está pendiente de aprobación por el administrador.',
             'postulante' => [
                 'ci'       => $request->ci,
                 'nombres'  => $request->nombres,

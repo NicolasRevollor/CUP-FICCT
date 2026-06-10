@@ -105,6 +105,7 @@ export default function Gestiones() {
                     <th>#</th>
                     <th>Gestión</th>
                     <th>Inicio</th>
+                    <th>Fin</th>
                     <th>Estado</th>
                     <th></th>
                   </tr>
@@ -115,6 +116,7 @@ export default function Gestiones() {
                       <td className="td-muted">{g.idgestion}</td>
                       <td className="td-bold">{String(g.periodo).startsWith(String(g.anio)) ? g.periodo : `${g.anio}-${g.periodo}`}</td>
                       <td className="td-muted">{g.fechainicio ? new Date(g.fechainicio).toLocaleDateString('es-BO') : '—'}</td>
+                      <td className="td-muted">{g.fechafin ? new Date(g.fechafin).toLocaleDateString('es-BO') : '—'}</td>
                       <td><span className={`badge ${g.estado === 'ACTIVO' ? 'badge-success' : 'badge-neutral'}`}>{g.estado ?? '—'}</span></td>
                       <td>
                         <div style={{ display: 'flex', gap: 6 }}>

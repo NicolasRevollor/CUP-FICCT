@@ -18,6 +18,7 @@ use App\Http\Controllers\UsuarioController;
 use App\Http\Controllers\AsistenciaController;
 use App\Http\Controllers\AulaController;
 use App\Http\Controllers\CargaMasivaController;
+use App\Http\Controllers\GestionController;
 
 // ── Rutas públicas ───────────────────────────────────────────
 Route::post('/login',                    [AuthController::class,    'login']);
@@ -124,6 +125,12 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::get('/docentes/{id}/grupos',                         [DocenteController::class, 'grupos']);
     Route::post('/docentes/{id}/asignar-grupo',                 [DocenteController::class, 'asignarGrupo']);
     Route::delete('/docentes/{id}/asignaciones/{idAsignacion}', [DocenteController::class, 'desasignarGrupo']);
+
+    // Gestiones académicas
+    Route::get('/gestiones',       [GestionController::class, 'index']);
+    Route::post('/gestiones',      [GestionController::class, 'store']);
+    Route::put('/gestiones/{id}',  [GestionController::class, 'update']);
+    Route::delete('/gestiones/{id}', [GestionController::class, 'destroy']);
 
     // Carga masiva — CU-15
     Route::post('/carga-masiva/postulantes', [CargaMasivaController::class, 'importarPostulantes']);

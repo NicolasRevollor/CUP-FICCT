@@ -93,8 +93,12 @@ class RegistroController extends Controller
                     'estadopago'       => 'CONFIRMADO',
                 ], 'idpagos');
 
-                // Crear inscripción PENDIENTE automáticamente para que aparezca en el módulo
-                $gestion = DB::table('gestion')->orderBy('idgestion', 'desc')->first();
+                // Crear inscripción PENDIENTE con la gestión ACTIVO más reciente ya iniciada
+                $gestion = DB::table('gestion')
+                    ->where('estado', 'ACTIVO')
+                    ->where('fechainicio', '<=', now())
+                    ->orderBy('fechainicio', 'desc')
+                    ->first();
                 if ($gestion) {
                     DB::table('inscripcion')->insert([
                         'idpostulante'      => $idPostulante,

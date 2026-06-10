@@ -17,8 +17,11 @@ class GestionController extends Controller
     public function store(Request $request)
     {
         $request->validate([
-            'anio'    => 'required|integer|min:2000|max:2100',
-            'periodo' => 'required|string|max:20',
+            'anio'        => 'required|integer|min:2000|max:2100',
+            'periodo'     => 'required|string|max:20',
+            'fechainicio' => 'required|date',
+            'fechafin'    => 'nullable|date|after_or_equal:fechainicio',
+            'estado'      => 'sometimes|string|max:20',
         ]);
 
         $existe = DB::table('gestion')
@@ -31,8 +34,11 @@ class GestionController extends Controller
         }
 
         $id = DB::table('gestion')->insertGetId([
-            'anio'    => $request->anio,
-            'periodo' => $request->periodo,
+            'anio'        => $request->anio,
+            'periodo'     => $request->periodo,
+            'fechainicio' => $request->fechainicio,
+            'fechafin'    => $request->fechafin,
+            'estado'      => $request->estado ?? 'ACTIVO',
         ], 'idgestion');
 
         return response()->json(['message' => 'Gestión creada correctamente', 'idgestion' => $id], 201);
@@ -46,14 +52,19 @@ class GestionController extends Controller
         }
 
         $request->validate([
-            'anio'    => 'sometimes|integer|min:2000|max:2100',
-            'periodo' => 'sometimes|string|max:20',
-            'activo'  => 'sometimes|boolean',
+            'anio'        => 'sometimes|integer|min:2000|max:2100',
+            'periodo'     => 'sometimes|string|max:20',
+            'fechainicio' => 'sometimes|date',
+            'fechafin'    => 'nullable|date',
+            'estado'      => 'sometimes|string|max:20',
         ]);
 
         $datos = [];
-        if ($request->has('anio'))    $datos['anio']    = $request->anio;
-        if ($request->has('periodo')) $datos['periodo'] = $request->periodo;
+        if ($request->has('anio'))        $datos['anio']        = $request->anio;
+        if ($request->has('periodo'))     $datos['periodo']     = $request->periodo;
+        if ($request->has('fechainicio')) $datos['fechainicio'] = $request->fechainicio;
+        if ($request->has('fechafin'))    $datos['fechafin']    = $request->fechafin;
+        if ($request->has('estado'))      $datos['estado']      = $request->estado;
 
         if (!empty($datos)) {
             DB::table('gestion')->where('idgestion', $id)->update($datos);

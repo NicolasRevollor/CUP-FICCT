@@ -103,8 +103,7 @@ export default function Gestiones() {
                 <thead>
                   <tr>
                     <th>#</th>
-                    <th>Año</th>
-                    <th>Período</th>
+                    <th>Gestión</th>
                     <th>Inicio</th>
                     <th>Estado</th>
                     <th></th>
@@ -114,8 +113,7 @@ export default function Gestiones() {
                   {lista.map(g => (
                     <tr key={g.idgestion}>
                       <td className="td-muted">{g.idgestion}</td>
-                      <td className="td-bold">{g.anio}</td>
-                      <td>{g.periodo}</td>
+                      <td className="td-bold">{g.anio}-{g.periodo}</td>
                       <td className="td-muted">{g.fechainicio ? new Date(g.fechainicio).toLocaleDateString('es-BO') : '—'}</td>
                       <td><span className={`badge ${g.estado === 'ACTIVO' ? 'badge-success' : 'badge-neutral'}`}>{g.estado ?? '—'}</span></td>
                       <td>

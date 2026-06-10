@@ -4,7 +4,7 @@ import Navbar from '../components/Navbar'
 import { apiFetch } from '../api'
 
 const PERIODOS = ['I', 'II', 'Verano']
-const INIT = { anio: new Date().getFullYear(), periodo: 'I', activo: true }
+const INIT = { anio: new Date().getFullYear(), periodo: 'I' }
 
 export default function Gestiones() {
   const navigate  = useNavigate()
@@ -39,7 +39,7 @@ export default function Gestiones() {
   }
 
   const abrirEditar = g => {
-    setForm({ anio: g.anio, periodo: g.periodo, activo: g.activo })
+    setForm({ anio: g.anio, periodo: g.periodo })
     setEditando(g.idgestion); setError(''); setExito(''); setModal(true)
   }
 
@@ -104,7 +104,6 @@ export default function Gestiones() {
                     <th>#</th>
                     <th>Año</th>
                     <th>Período</th>
-                    <th>Estado</th>
                     <th></th>
                   </tr>
                 </thead>
@@ -114,11 +113,6 @@ export default function Gestiones() {
                       <td className="td-muted">{g.idgestion}</td>
                       <td className="td-bold">{g.anio}</td>
                       <td>{g.periodo}</td>
-                      <td>
-                        <span className={`badge ${g.activo ? 'badge-success' : 'badge-neutral'}`}>
-                          {g.activo ? 'Activa' : 'Inactiva'}
-                        </span>
-                      </td>
                       <td>
                         <div style={{ display: 'flex', gap: 6 }}>
                           <button className="btn btn-sm btn-outline-info" onClick={() => abrirEditar(g)}>
@@ -173,10 +167,6 @@ export default function Gestiones() {
                     </select>
                   </div>
                 </div>
-                <label className="checkbox-row">
-                  <input type="checkbox" name="activo" checked={form.activo} onChange={onChange} />
-                  <span className="checkbox-label">Gestión activa</span>
-                </label>
                 <div className="form-actions" style={{ marginTop: 20 }}>
                   <button type="button" className="btn btn-outline" onClick={() => setModal(false)}>Cancelar</button>
                   <button type="submit" className="btn btn-primary">

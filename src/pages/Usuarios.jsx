@@ -9,22 +9,30 @@ export default function Usuarios() {
   const navigate = useNavigate()
   const usuario  = JSON.parse(localStorage.getItem('usuario'))
 
-  const [lista, setLista]     = useState([])
-  const [roles, setRoles]     = useState([])
-  const [loading, setLoading] = useState(false)
-  const [error, setError]     = useState('')
-  const [exito, setExito]     = useState('')
-  const [modal, setModal]     = useState(false)
+  const [lista, setLista]       = useState([])
+  const [roles, setRoles]       = useState([])
+  const [loading, setLoading]   = useState(false)
+  const [error, setError]       = useState('')
+  const [exito, setExito]       = useState('')
+  const [modal, setModal]       = useState(false)
   const [editando, setEditando] = useState(null)
-  const [form, setForm]       = useState(INIT)
+  const [form, setForm]         = useState(INIT)
+  const [query, setQuery]       = useState('')
+  const [page, setPage]         = useState(1)
+  const [lastPage, setLastPage] = useState(1)
+  const [total, setTotal]       = useState(0)
 
   if (!usuario || usuario.rol !== 'ADMINISTRADOR') { navigate('/dashboard'); return null }
 
-  const load = () => {
+  const load = (p = 1, q = '') => {
     setLoading(true)
-    apiFetch('/api/usuarios')
-      .then(r => r.ok ? r.json() : [])
-      .then(setLista)
+    const path = q ? `/api/usuarios?q=${encodeURIComponent(q)}&page=${p}` : `/api/usuarios?page=${p}`
+    apiFetch(path)
+      .then(r => r.ok ? r.json() : { data: [], last_page: 1, total: 0, current_page: 1 })
+      .then(d => {
+        setLista(d.data ?? []); setLastPage(d.last_page ?? 1)
+        setTotal(d.total ?? 0); setPage(d.current_page ?? 1)
+      })
       .catch(() => setError('Error al cargar usuarios'))
       .finally(() => setLoading(false))
   }
@@ -36,7 +44,7 @@ export default function Usuarios() {
       .catch(() => {})
   }
 
-  useEffect(() => { load(); loadRoles() }, [])
+  useEffect(() => { load(1, ''); loadRoles() }, [])
 
   const onChange = e => setForm(f => ({ ...f, [e.target.name]: e.target.value }))
 
@@ -61,7 +69,7 @@ export default function Usuarios() {
         : await apiFetch('/api/usuarios', { method: 'POST', body: JSON.stringify(body) })
 
       const data = await res.json()
-      if (res.ok) { setExito(data.message); setModal(false); load() }
+      if (res.ok) { setExito(data.message); setModal(false); load(page, query) }
       else setError(data.message || 'Error al guardar')
     } catch { setError('Error de conexión') }
   }
@@ -70,7 +78,7 @@ export default function Usuarios() {
     if (!window.confirm(`¿Desactivar al usuario "${u.nombre_usuario}"?`)) return
     try {
       const res = await apiFetch(`/api/usuarios/${u.idusuario}`, { method: 'DELETE' })
-      if (res.ok) { load(); setExito('Usuario desactivado') }
+      if (res.ok) { load(page, query); setExito('Usuario desactivado') }
       else { const d = await res.json(); setError(d.message) }
     } catch { setError('Error de conexión') }
   }
@@ -84,7 +92,7 @@ export default function Usuarios() {
           <div>
             <div className="page-title">Usuarios del sistema</div>
             <div className="page-subtitle">
-              {lista.length} usuarios ·{' '}
+              {total} usuarios ·{' '}
               <span className="badge badge-success">{lista.filter(u => u.estado === 'ACTIVO').length} activos</span>
               {' '}
               <span className="badge badge-danger">{lista.filter(u => u.estado === 'INACTIVO').length} inactivos</span>
@@ -102,6 +110,15 @@ export default function Usuarios() {
 
         {error && <div className="alert alert-danger"><i className="bi bi-exclamation-circle"></i> {error}</div>}
         {exito && <div className="alert alert-success"><i className="bi bi-check-circle"></i> {exito}</div>}
+
+        <form className="search-bar" onSubmit={e => { e.preventDefault(); load(1, query) }}>
+          <input className="form-input" placeholder="Buscar por nombre de usuario o email..."
+            value={query} onChange={e => setQuery(e.target.value)} />
+          <button className="btn btn-primary" type="submit"><i className="bi bi-search"></i> Buscar</button>
+          <button className="btn btn-outline" type="button" onClick={() => { setQuery(''); load(1, '') }}>
+            <i className="bi bi-x"></i> Limpiar
+          </button>
+        </form>
 
         <div className="card">
           {loading ? (
@@ -146,6 +163,14 @@ export default function Usuarios() {
               </table>
             </div>
           )}
+        </div>
+
+        <div className="pagination-row">
+          <span>Página {page} de {lastPage} · {total} usuarios</span>
+          <div className="pagination-btns">
+            <button className="page-btn" disabled={page === 1} onClick={() => load(page - 1, query)}>Anterior</button>
+            <button className="page-btn" disabled={page === lastPage} onClick={() => load(page + 1, query)}>Siguiente</button>
+          </div>
         </div>
 
       </div>

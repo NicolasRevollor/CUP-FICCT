@@ -150,6 +150,15 @@ function Examenes() {
                             <option key={m.idmateria} value={m.idmateria}>{m.nombre}</option>
                           ))}
                         </select>
+                        {form.idmateria && (() => {
+                          const mat = materias.find(m => String(m.idmateria) === String(form.idmateria))
+                          return mat ? (
+                            <div style={{ marginTop: 6, padding: '6px 10px', background: '#f0f9ff', border: '1px solid #bae6fd', borderRadius: 6, fontSize: 13, color: '#0369a1' }}>
+                              <i className="bi bi-check-circle-fill" style={{ marginRight: 6 }}></i>
+                              Materia confirmada: <strong>{mat.nombre}</strong>
+                            </div>
+                          ) : null
+                        })()}
                       </div>
                     )}
                     <div className="form-row-3">

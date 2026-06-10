@@ -15,6 +15,7 @@ const TABS = [
   { key: 'reprobados',label: 'Reprobados',   icon: 'bi-x-circle' },
   { key: 'notas',     label: 'Notas',        icon: 'bi-journal-text' },
   { key: 'grupos',    label: 'Grupos',       icon: 'bi-collection' },
+  { key: 'docentes',  label: 'Docentes',     icon: 'bi-person-badge' },
   { key: 'admision',  label: 'Admisión',     icon: 'bi-mortarboard' },
 ]
 
@@ -32,6 +33,8 @@ function Reportes() {
   const [materias, setMaterias]                 = useState([])
   const [materiaSeleccionada, setMateriaSel]    = useState('')
   const [notasMateria, setNotasMateria]         = useState([])
+  const [docentesGrupo, setDocentesGrupo]       = useState([])
+  const [loadingDoc, setLoadingDoc]             = useState(false)
 
   useEffect(() => {
     if (!usuario) { navigate('/'); return }
@@ -73,10 +76,33 @@ function Reportes() {
     doc.save(`notas_${mat?.nombre || 'materia'}_${new Date().toLocaleDateString()}.pdf`)
   }
 
+  const loadDocentesGrupo = () => {
+    setLoadingDoc(true)
+    apiFetch('/api/reportes/docentes-por-grupo').then(r => r.ok ? r.json() : []).then(setDocentesGrupo).catch(() => {}).finally(() => setLoadingDoc(false))
+  }
+
   const handleTab = (key) => {
     setTab(key)
     if (['todos','aprobados','reprobados'].includes(key)) loadPostulantes(key)
     if (key !== 'notas') { setMateriaSel(''); setNotasMateria([]) }
+    if (key === 'docentes') loadDocentesGrupo()
+  }
+
+  const exportarPDFDocentes = () => {
+    if (!docentesGrupo.length) return
+    const doc = new jsPDF()
+    doc.setFontSize(18); doc.setTextColor(17,24,39); doc.text('CUP · FICCT', 14, 20)
+    doc.setFontSize(11); doc.setTextColor(100); doc.text('Docentes por Grupo', 14, 30)
+    doc.setFontSize(9); doc.text(`Fecha: ${new Date().toLocaleDateString()} · Total: ${docentesGrupo.length}`, 14, 38)
+    autoTable(doc, {
+      startY: 44,
+      head: [['Grupo','Turno','Materia','Docente','Estado']],
+      body: docentesGrupo.map(d => [d.nombregrupo, d.turno, d.materia, d.docente, 'ACTIVO']),
+      headStyles: { fillColor: [17,24,39] },
+      alternateRowStyles: { fillColor: [249,250,251] },
+      styles: { fontSize: 8.5 },
+    })
+    doc.save(`docentes_por_grupo_${new Date().toLocaleDateString()}.pdf`)
   }
 
   const ejecutarAdmision = async () => {
@@ -229,6 +255,50 @@ function Reportes() {
                         <td className="td-muted">{p.ciudad}</td>
                         <td><strong>{p.promedio_final}</strong></td>
                         <td><span className={`badge badge-${BADGE[p.estadopostulante] || 'neutral'}`}>{p.estadopostulante}</span></td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* ── Docentes por grupo ── */}
+        {tab === 'docentes' && (
+          <div className="card">
+            <div className="card-header">
+              <i className="bi bi-person-badge"></i> Docentes por Grupo
+              <span style={{ marginLeft: 6, background: 'var(--bg)', borderRadius: 20, padding: '1px 9px', fontSize: 11, color: 'var(--text-muted)' }}>
+                {docentesGrupo.length}
+              </span>
+              <div className="card-header-actions">
+                <button className="btn btn-sm btn-outline-danger" onClick={exportarPDFDocentes} disabled={!docentesGrupo.length}>
+                  <i className="bi bi-file-earmark-pdf"></i> PDF
+                </button>
+              </div>
+            </div>
+            {loadingDoc ? (
+              <div className="spinner-box"><span className="spinner"></span></div>
+            ) : docentesGrupo.length === 0 ? (
+              <div className="empty-state">
+                <div className="empty-state-icon"><i className="bi bi-inbox"></i></div>
+                <div className="empty-state-text">No hay docentes asignados a grupos</div>
+              </div>
+            ) : (
+              <div className="table-wrap">
+                <table className="data-table">
+                  <thead>
+                    <tr><th>Grupo</th><th>Turno</th><th>Materia</th><th>Docente</th><th>Estado</th></tr>
+                  </thead>
+                  <tbody>
+                    {docentesGrupo.map((d, i) => (
+                      <tr key={i}>
+                        <td className="td-bold">{d.nombregrupo}</td>
+                        <td><span className={`badge badge-${TURNO_BADGE[d.turno] || 'neutral'}`}>{d.turno}</span></td>
+                        <td>{d.materia}</td>
+                        <td>{d.docente}</td>
+                        <td><span className="badge badge-success">ACTIVO</span></td>
                       </tr>
                     ))}
                   </tbody>

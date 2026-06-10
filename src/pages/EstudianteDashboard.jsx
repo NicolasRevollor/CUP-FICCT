@@ -32,10 +32,10 @@ function EstudianteDashboard() {
 
   useEffect(() => {
     Promise.all([
-      apiFetch('/api/estudiante/perfil').then(r => r.json()),
-      apiFetch('/api/estudiante/grupo').then(r => r.json()),
-      apiFetch('/api/estudiante/examenes').then(r => r.json()),
-      apiFetch('/api/estudiante/asistencia').then(r => r.json()),
+      apiFetch('/api/estudiante/perfil').then(r => r.ok ? r.json() : null),
+      apiFetch('/api/estudiante/grupo').then(r => r.ok ? r.json() : null),
+      apiFetch('/api/estudiante/examenes').then(r => r.ok ? r.json() : []),
+      apiFetch('/api/estudiante/asistencia').then(r => r.ok ? r.json() : []),
     ]).then(([p, g, e, a]) => {
       setPerfil(p)
       setGrupo(g)
@@ -149,6 +149,14 @@ function EstudianteDashboard() {
         </div>
 
         {/* ── PERFIL ── */}
+        {tab === 'perfil' && !perfil && (
+          <div className="card">
+            <div className="empty-state">
+              <div className="empty-state-icon"><i className="bi bi-person-x"></i></div>
+              <div className="empty-state-text">Tu perfil aún no está vinculado. Contactá al administrador.</div>
+            </div>
+          </div>
+        )}
         {tab === 'perfil' && perfil && (
           <div style={{ display: 'grid', gridTemplateColumns: '260px 1fr', gap: 20 }}>
             {/* Foto */}

@@ -8,7 +8,9 @@ function EditarPostulante() {
   const { id }      = useParams()
   const usuario     = JSON.parse(localStorage.getItem('usuario'))
   const [form, setForm]           = useState(null)
+  const [idusuario, setIdusuario] = useState(null)
   const [loading, setLoading]     = useState(false)
+  const [vinculando, setVinculando] = useState(false)
   const [error, setError]         = useState('')
   const [exito, setExito]         = useState('')
 
@@ -17,18 +19,32 @@ function EditarPostulante() {
   useEffect(() => {
     apiFetch(`/api/postulantes/${id}`)
       .then(r => { if (!r.ok) throw new Error(); return r.json() })
-      .then(d => setForm({
-        ci: d.ci, nombres: d.nombres, apellidos: d.apellidos, sexo: d.sexo,
-        direccion: d.direccion || '', telefono: d.telefono || '', correo: d.correo,
-        colegioProcedencia: d.colegioprocedencia || '', ciudad: d.ciudad || '',
-        tituloBachiller: d.titulobachiller, otrosRequisitos: d.otrosrequisitos || '',
-      }))
+      .then(d => {
+        setForm({
+          ci: d.ci, nombres: d.nombres, apellidos: d.apellidos, sexo: d.sexo,
+          direccion: d.direccion || '', telefono: d.telefono || '', correo: d.correo,
+          colegioProcedencia: d.colegioprocedencia || '', ciudad: d.ciudad || '',
+          tituloBachiller: d.titulobachiller, otrosRequisitos: d.otrosrequisitos || '',
+        })
+        setIdusuario(d.idusuario)
+      })
       .catch(() => setError('Error al cargar datos del postulante'))
   }, [id])
 
   const onChange = (e) => {
     const { name, value, type, checked } = e.target
     setForm(f => ({ ...f, [name]: type === 'checkbox' ? checked : value }))
+  }
+
+  const handleVincular = async () => {
+    setVinculando(true); setError(''); setExito('')
+    try {
+      const res  = await apiFetch(`/api/postulantes/${id}/vincular-usuario`, { method: 'POST' })
+      const data = await res.json()
+      if (res.ok) { setIdusuario(data.idusuario); setExito(data.message) }
+      else setError(data.message)
+    } catch { setError('Error de conexión') }
+    finally { setVinculando(false) }
   }
 
   const onSubmit = async (e) => {
@@ -65,6 +81,19 @@ function EditarPostulante() {
           <div className="back-header-info">
             <div className="back-header-title">Editar Postulante #{id}</div>
             <div className="back-header-sub">Modifique los campos necesarios</div>
+          </div>
+          <div style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: 10 }}>
+            {idusuario
+              ? <span className="badge badge-success"><i className="bi bi-link-45deg"></i> Usuario vinculado (ID {idusuario})</span>
+              : (
+                <>
+                  <span className="badge badge-danger"><i className="bi bi-link"></i> Sin usuario vinculado</span>
+                  <button className="btn btn-sm btn-outline" onClick={handleVincular} disabled={vinculando}>
+                    {vinculando ? 'Vinculando...' : 'Vincular por correo'}
+                  </button>
+                </>
+              )
+            }
           </div>
         </div>
 

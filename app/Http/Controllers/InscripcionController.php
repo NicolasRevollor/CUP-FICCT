@@ -147,7 +147,19 @@ class InscripcionController extends Controller
         if (!$postulante || $postulante->idusuario) return;
 
         $username = (string) $postulante->ci;
-        if (DB::table('usuario')->where('nombre_usuario', $username)->exists()) return;
+
+        // Si ya existe un usuario con ese username o ese correo, vincularlo y reenviar credenciales
+        $usuarioExistente = DB::table('usuario')
+            ->where('nombre_usuario', $username)
+            ->orWhere('email', $postulante->correo)
+            ->first();
+
+        if ($usuarioExistente) {
+            DB::table('postulante')
+                ->where('idpostulante', $idPostulante)
+                ->update(['idusuario' => $usuarioExistente->idusuario]);
+            return;
+        }
 
         $password     = 'CUP' . strtoupper(Str::random(5));
         $emailUsuario = DB::table('usuario')->where('email', $postulante->correo)->exists()

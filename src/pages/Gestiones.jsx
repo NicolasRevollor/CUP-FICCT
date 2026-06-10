@@ -113,7 +113,7 @@ export default function Gestiones() {
                   {lista.map(g => (
                     <tr key={g.idgestion}>
                       <td className="td-muted">{g.idgestion}</td>
-                      <td className="td-bold">{g.anio}-{g.periodo}</td>
+                      <td className="td-bold">{String(g.periodo).startsWith(String(g.anio)) ? g.periodo : `${g.anio}-${g.periodo}`}</td>
                       <td className="td-muted">{g.fechainicio ? new Date(g.fechainicio).toLocaleDateString('es-BO') : '—'}</td>
                       <td><span className={`badge ${g.estado === 'ACTIVO' ? 'badge-success' : 'badge-neutral'}`}>{g.estado ?? '—'}</span></td>
                       <td>

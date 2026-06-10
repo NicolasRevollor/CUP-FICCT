@@ -95,7 +95,7 @@ class PostulanteController extends Controller
         return response()->json(['message' => 'Postulante no encontrado'], 404);
     }
 
-    DB::table('postulante')->where('idpostulante', $id)->update([
+    $datos = [
         'nombres'            => $request->nombres,
         'apellidos'          => $request->apellidos,
         'sexo'               => $request->sexo,
@@ -106,10 +106,34 @@ class PostulanteController extends Controller
         'ciudad'             => $request->ciudad,
         'titulobachiller'    => $request->tituloBachiller ?? false,
         'otrosrequisitos'    => $request->otrosRequisitos,
-    ]);
+    ];
+
+    if ($request->has('idusuario')) {
+        $datos['idusuario'] = $request->idusuario ?: null;
+    }
+
+    DB::table('postulante')->where('idpostulante', $id)->update($datos);
 
     return response()->json(['message' => 'Postulante actualizado correctamente']);
 }
+
+    // Vincular postulante a su usuario por correo coincidente
+    public function vincularUsuario($id)
+    {
+        $postulante = DB::table('postulante')->where('idpostulante', $id)->first();
+        if (!$postulante) return response()->json(['message' => 'Postulante no encontrado'], 404);
+
+        $usuario = DB::table('usuario')->where('email', $postulante->correo)->first();
+        if (!$usuario) {
+            return response()->json(['message' => 'No existe ningún usuario con el correo ' . $postulante->correo], 404);
+        }
+
+        DB::table('postulante')
+            ->where('idpostulante', $id)
+            ->update(['idusuario' => $usuario->idusuario]);
+
+        return response()->json(['message' => 'Usuario vinculado correctamente', 'idusuario' => $usuario->idusuario]);
+    }
 
     // Eliminar postulante
     public function destroy($id)

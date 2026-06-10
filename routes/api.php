@@ -36,12 +36,14 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::get('/postulantes',         [PostulanteController::class, 'index']);
     Route::get('/postulantes/buscar',  [PostulanteController::class, 'buscar']);
     Route::get('/postulantes/{id}',    [PostulanteController::class, 'show']);
-    Route::post('/postulantes',        [PostulanteController::class, 'store']);
-    Route::put('/postulantes/{id}',    [PostulanteController::class, 'update']);
-    Route::delete('/postulantes/{id}', [PostulanteController::class, 'destroy']);
+    Route::post('/postulantes',                      [PostulanteController::class, 'store']);
+    Route::put('/postulantes/{id}',                  [PostulanteController::class, 'update']);
+    Route::post('/postulantes/{id}/vincular-usuario',[PostulanteController::class, 'vincularUsuario']);
+    Route::delete('/postulantes/{id}',               [PostulanteController::class, 'destroy']);
 
     // Grupos
     Route::get('/grupos',                  [GrupoController::class, 'index']);
+    Route::post('/grupos',                 [GrupoController::class, 'store']);
     Route::get('/grupos/{id}/postulantes',                    [GrupoController::class, 'postulantes']);
     Route::get('/grupos/{idGrupo}/examenes/{idMateria}',      [GrupoController::class, 'examenesGrupo']);
     Route::post('/grupos/asignar',                            [GrupoController::class, 'asignar']);
@@ -119,7 +121,8 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::put('/horarios/{id}',       [AulaController::class, 'updateHorario']);
 
     // Docentes — asignación a grupos (CU-11)
-    Route::post('/docentes/{id}/asignar-grupo',              [DocenteController::class, 'asignarGrupo']);
+    Route::get('/docentes/{id}/grupos',                         [DocenteController::class, 'grupos']);
+    Route::post('/docentes/{id}/asignar-grupo',                 [DocenteController::class, 'asignarGrupo']);
     Route::delete('/docentes/{id}/asignaciones/{idAsignacion}', [DocenteController::class, 'desasignarGrupo']);
 
     // Carga masiva — CU-15

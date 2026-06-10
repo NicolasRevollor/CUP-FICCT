@@ -15,23 +15,23 @@ use Illuminate\Support\Facades\Hash;
  */
 class UsuarioController extends Controller
 {
-    public function index()
+    public function index(Request $request)
     {
-        $usuarios = DB::table('usuario as u')
+        $query = DB::table('usuario as u')
             ->leftJoin('usuario_roles as ur', 'ur.idusuario', '=', 'u.idusuario')
             ->leftJoin('roles as r', 'r.idrol', '=', 'ur.idrol')
-            ->select(
-                'u.idusuario',
-                'u.nombre_usuario',
-                'u.email',
-                'u.estado',
-                'u.debe_cambiar_password',
-                'r.nombre as rol'
-            )
-            ->orderBy('u.nombre_usuario')
-            ->get();
+            ->select('u.idusuario', 'u.nombre_usuario', 'u.email', 'u.estado', 'u.debe_cambiar_password', 'r.nombre as rol')
+            ->orderBy('u.nombre_usuario');
 
-        return response()->json($usuarios);
+        if ($request->filled('q')) {
+            $q = $request->q;
+            $query->where(function ($qb) use ($q) {
+                $qb->where('u.nombre_usuario', 'ilike', "%{$q}%")
+                   ->orWhere('u.email', 'ilike', "%{$q}%");
+            });
+        }
+
+        return response()->json($query->paginate(20));
     }
 
     public function show(int $id)
@@ -72,6 +72,15 @@ class UsuarioController extends Controller
                 'idusuario' => $idUsuario,
                 'idrol'     => $request->idrol,
             ]);
+
+            // Si el rol es ESTUDIANTE, vincular al postulante que tenga el mismo correo
+            $rol = DB::table('roles')->where('idrol', $request->idrol)->first();
+            if ($rol && $rol->nombre === 'ESTUDIANTE') {
+                DB::table('postulante')
+                    ->where('correo', $request->email)
+                    ->whereNull('idusuario')
+                    ->update(['idusuario' => $idUsuario]);
+            }
         });
 
         return response()->json(['message' => 'Usuario creado correctamente'], 201);

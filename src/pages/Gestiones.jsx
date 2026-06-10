@@ -4,7 +4,8 @@ import Navbar from '../components/Navbar'
 import { apiFetch } from '../api'
 
 const PERIODOS = ['I', 'II', 'Verano']
-const INIT = { anio: new Date().getFullYear(), periodo: 'I' }
+const ESTADOS = ['ACTIVO', 'INACTIVO']
+const INIT = { anio: new Date().getFullYear(), periodo: 'I', fechainicio: '', fechafin: '', estado: 'ACTIVO' }
 
 export default function Gestiones() {
   const navigate  = useNavigate()
@@ -39,7 +40,7 @@ export default function Gestiones() {
   }
 
   const abrirEditar = g => {
-    setForm({ anio: g.anio, periodo: g.periodo })
+    setForm({ anio: g.anio, periodo: g.periodo, fechainicio: g.fechainicio?.split('T')[0] ?? '', fechafin: g.fechafin?.split('T')[0] ?? '', estado: g.estado ?? 'ACTIVO' })
     setEditando(g.idgestion); setError(''); setExito(''); setModal(true)
   }
 
@@ -104,6 +105,8 @@ export default function Gestiones() {
                     <th>#</th>
                     <th>Año</th>
                     <th>Período</th>
+                    <th>Inicio</th>
+                    <th>Estado</th>
                     <th></th>
                   </tr>
                 </thead>
@@ -113,6 +116,8 @@ export default function Gestiones() {
                       <td className="td-muted">{g.idgestion}</td>
                       <td className="td-bold">{g.anio}</td>
                       <td>{g.periodo}</td>
+                      <td className="td-muted">{g.fechainicio ? new Date(g.fechainicio).toLocaleDateString('es-BO') : '—'}</td>
+                      <td><span className={`badge ${g.estado === 'ACTIVO' ? 'badge-success' : 'badge-neutral'}`}>{g.estado ?? '—'}</span></td>
                       <td>
                         <div style={{ display: 'flex', gap: 6 }}>
                           <button className="btn btn-sm btn-outline-info" onClick={() => abrirEditar(g)}>
@@ -149,16 +154,7 @@ export default function Gestiones() {
                 <div className="form-row">
                   <div className="form-group">
                     <label className="form-label">Año <span className="req">*</span></label>
-                    <input
-                      type="number"
-                      className="form-input"
-                      name="anio"
-                      value={form.anio}
-                      onChange={onChange}
-                      min={2000}
-                      max={2100}
-                      required
-                    />
+                    <input type="number" className="form-input" name="anio" value={form.anio} onChange={onChange} min={2000} max={2100} required />
                   </div>
                   <div className="form-group">
                     <label className="form-label">Período <span className="req">*</span></label>
@@ -166,6 +162,22 @@ export default function Gestiones() {
                       {PERIODOS.map(p => <option key={p} value={p}>{p}</option>)}
                     </select>
                   </div>
+                </div>
+                <div className="form-row">
+                  <div className="form-group">
+                    <label className="form-label">Fecha inicio <span className="req">*</span></label>
+                    <input type="date" className="form-input" name="fechainicio" value={form.fechainicio} onChange={onChange} required />
+                  </div>
+                  <div className="form-group">
+                    <label className="form-label">Fecha fin</label>
+                    <input type="date" className="form-input" name="fechafin" value={form.fechafin} onChange={onChange} />
+                  </div>
+                </div>
+                <div className="form-group">
+                  <label className="form-label">Estado</label>
+                  <select className="form-select" name="estado" value={form.estado} onChange={onChange}>
+                    {ESTADOS.map(e => <option key={e} value={e}>{e}</option>)}
+                  </select>
                 </div>
                 <div className="form-actions" style={{ marginTop: 20 }}>
                   <button type="button" className="btn btn-outline" onClick={() => setModal(false)}>Cancelar</button>

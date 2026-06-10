@@ -4,8 +4,8 @@ import { loadStripe } from '@stripe/stripe-js'
 import { Elements, CardElement, useStripe, useElements } from '@stripe/react-stripe-js'
 import { apiFetch } from '../api'
 
-const stripePromise = loadStripe(import.meta.env.VITE_STRIPE_PUBLISHABLE_KEY || 'pk_test_placeholder')
-const MONTO_BS  = Number(import.meta.env.VITE_INSCRIPCION_MONTO || 120)
+const stripePromise = loadStripe(import.meta.env.VITE_STRIPE_PUBLISHABLE_KEY || '')
+const MONTO_BS  = Number(import.meta.env.VITE_INSCRIPCION_MONTO || 200)
 const MONTO_USD = Math.round(MONTO_BS / 6.9 * 100) / 100
 
 const CARD_STYLE = {
@@ -20,12 +20,12 @@ const CARD_STYLE = {
   },
 }
 
-// ── Formulario de pago (necesita contexto Stripe) ──────────
+// ── Formulario de pago con Stripe ──────────────────────────
 function PagoForm({ datos, onSuccess, onBack }) {
   const stripe   = useStripe()
   const elements = useElements()
-  const [loading, setLoading]   = useState(false)
-  const [error, setError]       = useState('')
+  const [loading, setLoading] = useState(false)
+  const [error, setError]     = useState('')
 
   const handlePagar = async (e) => {
     e.preventDefault()
@@ -41,21 +41,21 @@ function PagoForm({ datos, onSuccess, onBack }) {
       if (!ri.ok) throw new Error('Error al iniciar el pago')
       const { clientSecret } = await ri.json()
 
-      // 2. Confirmar pago con Stripe
+      // 2. Confirmar pago con Stripe desde el navegador
       const { error: stripeError, paymentIntent } = await stripe.confirmCardPayment(clientSecret, {
         payment_method: { card: elements.getElement(CardElement) },
       })
 
       if (stripeError) { setError(stripeError.message); return }
-      if (paymentIntent.status !== 'succeeded') { setError('Pago no completado. Intente de nuevo.'); return }
+      if (paymentIntent.status !== 'succeeded') { setError('Pago no completado. Intentá de nuevo.'); return }
 
-      // 3. Registrar postulante en el backend
+      // 3. Registrar postulante en el backend con el id del pago confirmado
       const rr = await apiFetch('/api/registro', {
         method: 'POST',
         body: JSON.stringify({
           ...datos,
           paymentIntentId: paymentIntent.id,
-          monto: MONTO_USD,
+          monto: MONTO_BS,
           metodoPago: 'STRIPE',
         }),
       })
@@ -72,30 +72,29 @@ function PagoForm({ datos, onSuccess, onBack }) {
 
   return (
     <form onSubmit={handlePagar}>
-      <div style={{ marginBottom: 20 }}>
-        <div style={{ fontSize: 13, fontWeight: 500, color: '#111827', marginBottom: 6 }}>
-          Datos del postulante a registrar
-        </div>
-        <div style={{ background: '#f8f9fa', border: '1px solid #e5e7eb', borderRadius: 8, padding: '12px 14px', fontSize: 13, color: '#374151' }}>
-          <strong>{datos.nombres} {datos.apellidos}</strong> — CI: {datos.ci}<br />
-          <span style={{ color: '#6b7280' }}>{datos.correo}</span>
-        </div>
+
+      {/* Resumen del postulante */}
+      <div style={{ background: '#f8f9fa', border: '1px solid #e5e7eb', borderRadius: 8, padding: '12px 16px', marginBottom: 20, fontSize: 13 }}>
+        <div style={{ fontWeight: 700, marginBottom: 2 }}>{datos.nombres} {datos.apellidos}</div>
+        <div style={{ color: '#6b7280' }}>CI: {datos.ci} · {datos.correo}</div>
       </div>
 
+      {/* Monto */}
       <div style={{ marginBottom: 20 }}>
-        <div style={{ fontSize: 13, fontWeight: 500, color: '#111827', marginBottom: 6 }}>
-          Monto a pagar
-        </div>
-        <div style={{ fontSize: 24, fontWeight: 800, color: '#0d2451' }}>Bs. {MONTO_BS}</div>
-        <div style={{ fontSize: 11, color: '#9ca3af', marginTop: 2 }}>Pago de inscripción al CUP-FICCT 2026</div>
+        <div style={{ fontSize: 13, fontWeight: 500, color: '#111827', marginBottom: 4 }}>Monto a pagar</div>
+        <div style={{ fontSize: 32, fontWeight: 800, color: '#0d2451' }}>Bs. {MONTO_BS}</div>
+        <div style={{ fontSize: 11, color: '#9ca3af', marginTop: 2 }}>Inscripción CUP-FICCT 2026 · ~${MONTO_USD} USD</div>
       </div>
 
+      {/* Datos de tarjeta */}
       <div className="form-group">
-        <label className="form-label">Datos de tarjeta</label>
+        <label className="form-label">Datos de tarjeta <span className="req">*</span></label>
         <div style={{ border: '1px solid #e5e7eb', borderRadius: 7, padding: '10px 13px', background: '#fff' }}>
           <CardElement options={CARD_STYLE} />
         </div>
-        <div className="form-hint">Modo de prueba — usa 4242 4242 4242 4242 · Fecha futura · CVC cualquiera</div>
+        <div className="form-hint">
+          Modo de prueba — usá <strong>4242 4242 4242 4242</strong> · fecha futura · CVC cualquiera
+        </div>
       </div>
 
       {error && (
@@ -104,16 +103,19 @@ function PagoForm({ datos, onSuccess, onBack }) {
         </div>
       )}
 
-      <div className="form-actions" style={{ marginTop: 20 }}>
+      <div style={{ fontSize: 12, color: '#6b7280', margin: '14px 0', lineHeight: 1.6 }}>
+        <i className="bi bi-info-circle"></i> Tu pago será procesado por Stripe. Una vez aprobado por el administrador recibirás tus credenciales en <strong>{datos.correo}</strong>.
+      </div>
+
+      <div className="form-actions">
         <button type="button" className="btn btn-outline" onClick={onBack} disabled={loading}>
           <i className="bi bi-arrow-left"></i> Volver
         </button>
-        <button type="submit" className="btn btn-primary" disabled={loading || !stripe} style={{ background: '#c62828', borderColor: '#c62828' }}>
-          {loading ? (
-            <><span className="spinner" style={{ width: 15, height: 15, borderWidth: 2, marginBottom: 0 }}></span> Procesando...</>
-          ) : (
-            <><i className="bi bi-lock-fill"></i> Pagar Bs. {MONTO_BS} e Inscribirme</>
-          )}
+        <button type="submit" className="btn btn-primary" disabled={loading || !stripe} style={{ background: '#0d2451', borderColor: '#0d2451' }}>
+          {loading
+            ? <><span className="spinner" style={{ width: 15, height: 15, borderWidth: 2, marginBottom: 0 }}></span> Procesando...</>
+            : <><i className="bi bi-lock-fill"></i> Pagar Bs. {MONTO_BS} e inscribirme</>
+          }
         </button>
       </div>
     </form>
@@ -125,13 +127,13 @@ export default function Registro() {
   const navigate = useNavigate()
   const [step, setStep]       = useState(1)
   const [completado, setComp] = useState(null)
+  const [errors, setErrors]   = useState({})
   const [form, setForm]       = useState({
     ci: '', nombres: '', apellidos: '', sexo: 'M',
     direccion: '', telefono: '', correo: '',
     colegioProcedencia: '', ciudad: '',
     tituloBachiller: false, otrosRequisitos: '',
   })
-  const [errors, setErrors]   = useState({})
 
   const onChange = (e) => {
     const { name, value, type, checked } = e.target
@@ -146,7 +148,6 @@ export default function Registro() {
     if (!form.apellidos.trim()) e.apellidos = 'Los apellidos son requeridos'
     if (!form.correo.trim())    e.correo    = 'El correo es requerido'
     if (!/\S+@\S+\.\S+/.test(form.correo)) e.correo = 'Correo no válido'
-    if (!form.tituloBachiller)  e.tituloBachiller = 'Debes tener Título de Bachiller'
     setErrors(e)
     return Object.keys(e).length === 0
   }
@@ -156,6 +157,7 @@ export default function Registro() {
     if (validar()) setStep(2)
   }
 
+  // ── Pantalla de éxito ──
   if (completado) return (
     <div style={{ minHeight: '100vh', background: '#f3f4f6', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 24 }}>
       <div className="card" style={{ maxWidth: 480, width: '100%', textAlign: 'center' }}>
@@ -163,17 +165,19 @@ export default function Registro() {
           <div style={{ width: 64, height: 64, background: '#ecfdf5', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 20px' }}>
             <i className="bi bi-check-circle-fill" style={{ fontSize: 32, color: '#059669' }}></i>
           </div>
-          <h2 style={{ fontWeight: 800, color: '#111827', marginBottom: 8 }}>¡Registro exitoso!</h2>
-          <p style={{ color: '#6b7280', marginBottom: 20, fontSize: 14 }}>
-            Bienvenido/a <strong>{completado.nombres} {completado.apellidos}</strong>.<br />
-            Tu pago fue registrado. El administrador revisará tu solicitud y te enviará tus credenciales de acceso por correo.
+          <h2 style={{ fontWeight: 800, color: '#111827', marginBottom: 8 }}>¡Pago recibido!</h2>
+          <p style={{ color: '#6b7280', marginBottom: 20, fontSize: 14, lineHeight: 1.6 }}>
+            Gracias, <strong>{completado.nombres} {completado.apellidos}</strong>.<br />
+            Tu pago fue procesado correctamente. El administrador revisará tu solicitud
+            y recibirás tus <strong>credenciales de acceso</strong> en:<br />
+            <strong>{completado.correo}</strong>
           </p>
           <div style={{ background: '#f8f9fa', borderRadius: 8, padding: '14px 16px', marginBottom: 24, textAlign: 'left' }}>
-            <div style={{ fontSize: 12, color: '#6b7280', marginBottom: 4 }}>Tu CI de referencia</div>
+            <div style={{ fontSize: 12, color: '#6b7280', marginBottom: 4 }}>Tu CI (será tu nombre de usuario)</div>
             <div style={{ fontSize: 20, fontWeight: 800, color: '#0d2451' }}>{completado.ci}</div>
-            <div style={{ fontSize: 12, color: '#9ca3af', marginTop: 4 }}>Guarda este dato — lo necesitarás cuando recibas tus credenciales</div>
+            <div style={{ fontSize: 12, color: '#9ca3af', marginTop: 4 }}>Guardá este dato — lo usarás para iniciar sesión</div>
           </div>
-            <button className="btn btn-primary btn-full" onClick={() => navigate('/')} style={{ background: '#0d2451', borderColor: '#0d2451' }}>
+          <button className="btn btn-primary btn-full" onClick={() => navigate('/')} style={{ background: '#0d2451', borderColor: '#0d2451' }}>
             <i className="bi bi-house"></i> Volver al inicio
           </button>
         </div>
@@ -186,17 +190,17 @@ export default function Registro() {
 
       {/* Navbar mínima */}
       <nav style={{ background: '#0d2451', padding: '0 24px', height: 58, display: 'flex', alignItems: 'center', gap: 12 }}>
-        <button onClick={() => navigate('/')} style={{ background: 'none', border: 'none', color: 'rgba(255,255,255,.7)', cursor: 'pointer', fontSize: 20, padding: 0, display: 'flex', alignItems: 'center' }}>
+        <button onClick={() => navigate('/')} style={{ background: 'none', border: 'none', color: 'rgba(255,255,255,.7)', cursor: 'pointer', fontSize: 20, padding: 0 }}>
           <i className="bi bi-arrow-left"></i>
         </button>
-        <span style={{ color: '#fff', fontWeight: 700, fontSize: 15 }}>CUP · FICCT — Inscripción</span>
+        <span style={{ color: '#fff', fontWeight: 700, fontSize: 15 }}>CUP · FICCT — Inscripción 2026</span>
       </nav>
 
       <div style={{ maxWidth: 620, margin: '0 auto', padding: '36px 24px' }}>
 
-        {/* Steps indicator */}
+        {/* Indicador de pasos */}
         <div style={{ display: 'flex', alignItems: 'center', marginBottom: 32, gap: 8 }}>
-          {[{ n: 1, label: 'Datos personales' }, { n: 2, label: 'Pago' }].map((s, i) => (
+          {[{ n: 1, label: 'Datos personales' }, { n: 2, label: 'Pago con Stripe' }].map((s, i) => (
             <div key={s.n} style={{ display: 'flex', alignItems: 'center', flex: i < 1 ? 1 : 'none' }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
                 <div style={{ width: 28, height: 28, borderRadius: '50%', background: step >= s.n ? '#0d2451' : '#e5e7eb', color: step >= s.n ? '#fff' : '#9ca3af', fontWeight: 700, fontSize: 13, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>{s.n}</div>
@@ -214,6 +218,7 @@ export default function Registro() {
           </div>
           <div className="card-body">
 
+            {/* ── Paso 1: datos del postulante ── */}
             {step === 1 && (
               <form onSubmit={handleSiguiente}>
                 <div className="form-section">
@@ -221,7 +226,7 @@ export default function Registro() {
                   <div className="form-row-3">
                     <div className="form-group">
                       <label className="form-label">CI <span className="req">*</span></label>
-                      <input className={`form-input ${errors.ci ? 'border-red' : ''}`} name="ci" value={form.ci} onChange={onChange} placeholder="Ej: 12345678" />
+                      <input className="form-input" name="ci" value={form.ci} onChange={onChange} placeholder="Ej: 12345678" />
                       {errors.ci && <div className="form-hint" style={{ color: '#dc2626' }}>{errors.ci}</div>}
                     </div>
                     <div className="form-group">
@@ -269,13 +274,6 @@ export default function Registro() {
                     <label className="form-label">Dirección</label>
                     <input className="form-input" name="direccion" value={form.direccion} onChange={onChange} />
                   </div>
-                  <div className="form-group">
-                    <label className="checkbox-row" style={{ cursor: 'pointer' }}>
-                      <input type="checkbox" name="tituloBachiller" checked={form.tituloBachiller} onChange={onChange} />
-                      <span className="checkbox-label">Tengo Título de Bachiller <span className="req">*</span></span>
-                    </label>
-                    {errors.tituloBachiller && <div className="form-hint" style={{ color: '#dc2626', marginTop: 4 }}>{errors.tituloBachiller}</div>}
-                  </div>
                 </div>
 
                 <div className="form-actions">
@@ -287,6 +285,7 @@ export default function Registro() {
               </form>
             )}
 
+            {/* ── Paso 2: pago con Stripe ── */}
             {step === 2 && (
               <Elements stripe={stripePromise}>
                 <PagoForm
@@ -302,7 +301,10 @@ export default function Registro() {
 
         <p style={{ textAlign: 'center', fontSize: 12, color: '#9ca3af', marginTop: 16 }}>
           <i className="bi bi-lock"></i> Pago procesado de forma segura por Stripe.
-          ¿Ya estás registrado? <button onClick={() => navigate('/login')} style={{ background: 'none', border: 'none', color: '#0d2451', cursor: 'pointer', fontWeight: 600, fontSize: 12, padding: 0 }}>Iniciar sesión</button>
+          {' '}¿Ya estás registrado?{' '}
+          <button onClick={() => navigate('/login')} style={{ background: 'none', border: 'none', color: '#0d2451', cursor: 'pointer', fontWeight: 600, fontSize: 12, padding: 0 }}>
+            Iniciar sesión
+          </button>
         </p>
       </div>
     </div>

@@ -7,14 +7,48 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
 
 /**
- * CU-14 — Gestión de usuarios del sistema
- * CRUD sobre la tabla usuario. Permite al administrador listar, ver, crear,
- * actualizar estado/email y desactivar usuarios. Los roles se gestionan
- * desde la tabla usuario_roles.
- * Desactivar un usuario cambia su estado a INACTIVO (no elimina el registro).
+ * ============================================================
+ * UsuarioController  —  CU-14: Gestión de usuarios del sistema
+ * ============================================================
+ *
+ * ¿QUÉ HACE ESTE CONTROLADOR?
+ *   CRUD de usuarios para el administrador del sistema.
+ *   Cada usuario tiene exactamente un rol (tabla usuario_roles).
+ *   Desactivar usuario es soft delete (estado=INACTIVO).
+ *
+ * TABLA PRINCIPAL: usuario
+ *   - idusuario, nombre_usuario, email, password (bcrypt)
+ *   - estado: ACTIVO | INACTIVO
+ *   - debe_cambiar_password: true cuando se crea la cuenta (el usuario debe cambiarla al primer login)
+ *
+ * TABLA RELACIONADA: usuario_roles
+ *   - idusuario, idrol  (FK a roles)
+ *   Roles posibles: ADMINISTRADOR | DOCENTE | ESTUDIANTE | COORDINADOR
+ *
+ * ENDPOINTS DISPONIBLES:
+ *   GET    /api/usuarios           → index()
+ *   GET    /api/usuarios/{id}      → show()
+ *   GET    /api/usuarios/roles     → roles()
+ *   POST   /api/usuarios           → store()
+ *   PUT    /api/usuarios/{id}      → update()
+ *   DELETE /api/usuarios/{id}      → destroy()
  */
 class UsuarioController extends Controller
 {
+    // ──────────────────────────────────────────────────────────────
+    // GET /api/usuarios?q=busqueda
+    // ──────────────────────────────────────────────────────────────
+    /**
+     * Lista todos los usuarios con su rol. Soporta búsqueda por nombre_usuario o email.
+     *
+     * DIAGRAMA DE SECUENCIA:
+     *   Cliente → GET /usuarios?q=juan
+     *   [1] usuario LEFT JOIN usuario_roles LEFT JOIN roles
+     *   OPT [si viene ?q=...]
+     *     → WHERE nombre_usuario ILIKE %q% OR email ILIKE %q%
+     *   [2] Paginar 20 por página
+     *   [3] → 200 con paginación y campo 'rol' por cada usuario
+     */
     public function index(Request $request)
     {
         $query = DB::table('usuario as u')
@@ -34,6 +68,18 @@ class UsuarioController extends Controller
         return response()->json($query->paginate(20));
     }
 
+    // ──────────────────────────────────────────────────────────────
+    // GET /api/usuarios/{id}
+    // ──────────────────────────────────────────────────────────────
+    /**
+     * Devuelve los datos de un usuario con su rol.
+     *
+     * DIAGRAMA DE SECUENCIA:
+     *   Cliente → GET /usuarios/10
+     *   [1] usuario LEFT JOIN usuario_roles LEFT JOIN roles WHERE idusuario = 10
+     *   ALT [no existe] → 404
+     *   [2] → 200 con { idusuario, nombre_usuario, email, estado, rol }
+     */
     public function show(int $id)
     {
         $usuario = DB::table('usuario as u')
@@ -50,6 +96,27 @@ class UsuarioController extends Controller
         return response()->json($usuario);
     }
 
+    // ──────────────────────────────────────────────────────────────
+    // POST /api/usuarios
+    // ──────────────────────────────────────────────────────────────
+    /**
+     * Crea un nuevo usuario del sistema y le asigna un rol.
+     * Si el rol es ESTUDIANTE, vincula automáticamente al postulante con ese correo.
+     *
+     * DIAGRAMA DE SECUENCIA:
+     *   Cliente → POST /usuarios { nombre_usuario, email, password, idrol }
+     *   [1] Validar (nombre_usuario y email únicos)
+     *
+     *   DB TRANSACTION:
+     *     [2] INSERT usuario (password=bcrypt, estado=ACTIVO, debe_cambiar_password=true)
+     *     [3] INSERT usuario_roles (idusuario, idrol)
+     *     OPT [rol = ESTUDIANTE]
+     *       [4] UPDATE postulante SET idusuario = nuevo idusuario
+     *           WHERE correo = email AND idusuario IS NULL
+     *           (vinculación automática si el postulante tiene ese correo)
+     *
+     *   [5] → 201 "Usuario creado correctamente"
+     */
     public function store(Request $request)
     {
         $request->validate([
@@ -86,6 +153,21 @@ class UsuarioController extends Controller
         return response()->json(['message' => 'Usuario creado correctamente'], 201);
     }
 
+    // ──────────────────────────────────────────────────────────────
+    // PUT /api/usuarios/{id}
+    // ──────────────────────────────────────────────────────────────
+    /**
+     * Actualiza email y/o estado de un usuario.
+     * El nombre_usuario y el rol NO son modificables desde aquí.
+     *
+     * DIAGRAMA DE SECUENCIA:
+     *   Cliente → PUT /usuarios/10  { email?, estado? }
+     *   [1] Verificar que el usuario exista
+     *   ALT [no existe] → 404
+     *   [2] Validar: email único (excepto el propio), estado válido
+     *   [3] UPDATE usuario con solo los campos que vengan en el body
+     *   [4] → 200 "Usuario actualizado correctamente"
+     */
     public function update(Request $request, int $id)
     {
         $usuario = DB::table('usuario')->where('idusuario', $id)->first();
@@ -108,7 +190,21 @@ class UsuarioController extends Controller
         return response()->json(['message' => 'Usuario actualizado correctamente']);
     }
 
-    // Desactivar usuario (soft delete — cambia estado a INACTIVO)
+    // ──────────────────────────────────────────────────────────────
+    // DELETE /api/usuarios/{id}
+    // ──────────────────────────────────────────────────────────────
+    /**
+     * Desactiva un usuario (soft delete: estado → INACTIVO).
+     * El usuario no puede hacer login mientras esté INACTIVO.
+     *
+     * DIAGRAMA DE SECUENCIA:
+     *   Cliente → DELETE /usuarios/10
+     *   [1] Verificar que el usuario exista
+     *   ALT [no existe] → 404
+     *   [2] UPDATE usuario SET estado = 'INACTIVO'
+     *       (soft delete: preserva historial, no elimina el registro)
+     *   [3] → 200 "Usuario desactivado correctamente"
+     */
     public function destroy(int $id)
     {
         $usuario = DB::table('usuario')->where('idusuario', $id)->first();
@@ -121,6 +217,17 @@ class UsuarioController extends Controller
         return response()->json(['message' => 'Usuario desactivado correctamente']);
     }
 
+    // ──────────────────────────────────────────────────────────────
+    // GET /api/usuarios/roles
+    // ──────────────────────────────────────────────────────────────
+    /**
+     * Lista todos los roles disponibles para asignar a usuarios.
+     *
+     * DIAGRAMA DE SECUENCIA:
+     *   Cliente → GET /usuarios/roles
+     *   [1] SELECT * FROM roles ORDER BY nombre
+     *   [2] → 200 con array de { idrol, nombre }
+     */
     public function roles()
     {
         return response()->json(DB::table('roles')->orderBy('nombre')->get());

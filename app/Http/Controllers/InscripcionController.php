@@ -10,15 +10,52 @@ use Illuminate\Support\Str;
 use App\Mail\CredencialesEstudiante;
 
 /**
- * CU-04 — Inscripción de postulantes
- * Registra la inscripción formal de un postulante vinculando idpostulante + idgestion + idpago.
- * Requiere que el postulante tenga un pago en estado CONFIRMADO antes de inscribirse.
- * Al confirmar la inscripción genera credenciales de acceso (rol ESTUDIANTE) y las envía por correo.
- * NOTA: la lógica de selección de carrera (1ra y 2da opción) está en ReporteController::admision,
- * no en este controlador.
+ * ============================================================
+ * InscripcionController  —  CU-04: Inscripción de postulantes
+ * ============================================================
+ *
+ * ¿QUÉ HACE ESTE CONTROLADOR?
+ *   Gestiona la inscripción formal de postulantes: los vincula a una gestión
+ *   académica y a un pago CONFIRMADO. El admin confirma la inscripción
+ *   y el sistema genera las credenciales de acceso del estudiante.
+ *
+ * TABLA PRINCIPAL: inscripcion
+ *   - idinscripcion, idpostulante, idpago, fechainscripcion
+ *   - estadoinscripcion: PENDIENTE | CONFIRMADA | ANULADA
+ *   - gestion: FK → tabla gestion (idgestion del período académico activo)
+ *
+ * FLUJO COMPLETO:
+ *   1. Postulante paga (PagoController o RegistroController)
+ *   2. Admin registra la inscripción → store() → estado: PENDIENTE
+ *   3. Admin confirma la inscripción → update(CONFIRMADA)
+ *      → se generan credenciales (usuario + contraseña) y se envían por correo
+ *      → postulante pasa a INSCRITO
+ *
+ * NOTA:
+ *   La lógica de asignación de carreras (1ra y 2da opción por cupos)
+ *   está en ReporteController::admision(), no aquí.
+ *
+ * ENDPOINTS DISPONIBLES:
+ *   GET  /api/inscripciones                   → index()
+ *   GET  /api/inscripciones/gestiones         → gestiones()
+ *   GET  /api/inscripciones/postulante/{id}   → porPostulante()
+ *   POST /api/inscripciones                   → store()
+ *   PUT  /api/inscripciones/{id}              → update()
  */
 class InscripcionController extends Controller
 {
+    // ──────────────────────────────────────────────────────────────
+    // GET /api/inscripciones
+    // ──────────────────────────────────────────────────────────────
+    /**
+     * Lista todas las inscripciones con datos del postulante, pago y gestión.
+     *
+     * DIAGRAMA DE SECUENCIA:
+     *   Cliente → GET /inscripciones
+     *   [1] inscripcion JOIN postulante JOIN pagos JOIN gestion
+     *   [2] Ordenar por fechainscripcion DESC
+     *   [3] → 200 con array de inscripciones
+     */
     public function index()
     {
         $inscripciones = DB::table('inscripcion as i')
@@ -44,12 +81,35 @@ class InscripcionController extends Controller
         return response()->json($inscripciones);
     }
 
+    // ──────────────────────────────────────────────────────────────
+    // GET /api/inscripciones/gestiones
+    // ──────────────────────────────────────────────────────────────
+    /**
+     * Lista todas las gestiones académicas disponibles para seleccionar al inscribir.
+     *
+     * DIAGRAMA DE SECUENCIA:
+     *   Cliente → GET /inscripciones/gestiones
+     *   [1] SELECT * FROM gestion ORDER BY idgestion DESC
+     *   [2] → 200 con array de gestiones
+     */
     public function gestiones()
     {
         $gestiones = DB::table('gestion')->orderBy('idgestion', 'desc')->get();
         return response()->json($gestiones);
     }
 
+    // ──────────────────────────────────────────────────────────────
+    // GET /api/inscripciones/postulante/{idPostulante}
+    // ──────────────────────────────────────────────────────────────
+    /**
+     * Devuelve la inscripción de un postulante (máximo una por postulante).
+     *
+     * DIAGRAMA DE SECUENCIA:
+     *   Cliente → GET /inscripciones/postulante/42
+     *   [1] SELECT * FROM inscripcion WHERE idpostulante = 42 LIMIT 1
+     *   ALT [no tiene inscripción] → 404
+     *   [2] → 200 con el objeto inscripcion
+     */
     public function porPostulante(int $idPostulante)
     {
         $inscripcion = DB::table('inscripcion')->where('idpostulante', $idPostulante)->first();
@@ -59,8 +119,33 @@ class InscripcionController extends Controller
         return response()->json($inscripcion);
     }
 
-    // Registrar inscripción (CU04)
-    // Requiere que el postulante tenga un pago CONFIRMADO
+    // ──────────────────────────────────────────────────────────────
+    // POST /api/inscripciones
+    // ──────────────────────────────────────────────────────────────
+    /**
+     * Registra la inscripción formal vinculando postulante + pago + gestión.
+     * El pago más reciente CONFIRMADO se asigna automáticamente.
+     *
+     * DIAGRAMA DE SECUENCIA:
+     *   Cliente → POST /inscripciones { idpostulante, idgestion }
+     *
+     *   [1] Validar campos requeridos
+     *   [2] Verificar que el postulante exista
+     *   ALT [no existe] → 404
+     *
+     *   [3] Verificar que no tenga ya una inscripción (UNIQUE en idpostulante)
+     *   ALT [ya tiene inscripción] → 400
+     *
+     *   [4] Buscar el pago más reciente del postulante en estado CONFIRMADO
+     *   ALT [no tiene pago CONFIRMADO]
+     *     → 400 "Confirme el pago antes de inscribir"
+     *
+     *   [5] Verificar que la gestión exista
+     *   ALT [no existe] → 404
+     *
+     *   [6] INSERT en inscripcion con estadoinscripcion='PENDIENTE'
+     *   [7] → 201 "Inscripción registrada correctamente"
+     */
     public function store(Request $request)
     {
         $request->validate([
@@ -110,6 +195,34 @@ class InscripcionController extends Controller
         return response()->json(['message' => 'Inscripción registrada correctamente'], 201);
     }
 
+    // ──────────────────────────────────────────────────────────────
+    // PUT /api/inscripciones/{id}
+    // ──────────────────────────────────────────────────────────────
+    /**
+     * Actualiza el estado de una inscripción. Confirmar activa el acceso del postulante.
+     *
+     * DIAGRAMA DE SECUENCIA:
+     *   Cliente → PUT /inscripciones/7  { estadoinscripcion: "CONFIRMADA" }
+     *
+     *   [1] Buscar inscripción por ID
+     *   ALT [no existe] → 404
+     *
+     *   [2] Validar nuevo estado (PENDIENTE|CONFIRMADA|ANULADA)
+     *   [3] UPDATE inscripcion SET estadoinscripcion = ...
+     *
+     *   OPT [nuevo estado = CONFIRMADA y antes NO era CONFIRMADA]
+     *     [4] generarCredenciales(idpostulante):
+     *         → Si el postulante ya tiene idusuario: no hacer nada
+     *         → Si ya existe usuario con ese CI o correo: vincular y no crear nuevo
+     *         → Si no existe: INSERT usuario + usuario_roles(ESTUDIANTE)
+     *                         + enviar email con credenciales
+     *     [5] UPDATE postulante SET estadopostulante = 'INSCRITO'
+     *
+     *   OPT [nuevo estado = ANULADA]
+     *     [6] UPDATE postulante SET estadopostulante = 'PENDIENTE' (revertir a pendiente)
+     *
+     *   [7] → 200 "Inscripción actualizada correctamente"
+     */
     public function update(Request $request, int $id)
     {
         $inscripcion = DB::table('inscripcion')->where('idinscripcion', $id)->first();

@@ -5,14 +5,45 @@ namespace App\Http\Controllers;
 use Illuminate\Support\Facades\DB;
 
 /**
- * CU-16 — Reportes y estadísticas
- * Implementados: lista general, aprobados, reprobados, estadísticas por materia,
- * grupos con aprobados, admisión por cupos (1ra y 2da opción de carrera), reporte de admitidos.
- * También incluye: docentes por grupo (docentesPorGrupo).
+ * ============================================================
+ * ReporteController  —  CU-16: Reportes y estadísticas
+ * ============================================================
+ *
+ * ¿QUÉ HACE ESTE CONTROLADOR?
+ *   Centraliza todos los reportes de consulta del sistema.
+ *   Todos los métodos son de solo lectura (SELECT).
+ *   No modifica datos — excepto admision() que actualiza estadoadmision en carreraadmitida.
+ *
+ * MÉTODO ESPECIAL: admision()
+ *   Es el algoritmo central de admisión: asigna a cada postulante APROBADO
+ *   a la carrera que le corresponde según cupos y promedio.
+ *   Se puede ejecutar múltiples veces (idempotente: reescribe estadoadmision).
+ *
+ * ENDPOINTS DISPONIBLES:
+ *   GET  /api/reportes/dashboard             → dashboard()
+ *   GET  /api/reportes/postulantes           → postulantes()
+ *   GET  /api/reportes/aprobados             → aprobados()
+ *   GET  /api/reportes/reprobados            → reprobados()
+ *   GET  /api/reportes/estadisticas-materia  → estadisticasMateria()
+ *   GET  /api/reportes/grupos-aprobados      → gruposAprobados()
+ *   GET  /api/reportes/docentes-por-grupo    → docentesPorGrupo()
+ *   POST /api/reportes/admision              → admision()
+ *   GET  /api/reportes/admision              → reporteAdmision()
  */
 class ReporteController extends Controller
 {
-    // Dashboard estadísticas reales
+    // ──────────────────────────────────────────────────────────────
+    // GET /api/reportes/dashboard
+    // ──────────────────────────────────────────────────────────────
+    /**
+     * Contadores globales para el panel principal del administrador.
+     *
+     * DIAGRAMA DE SECUENCIA:
+     *   Cliente → GET /reportes/dashboard
+     *   [1] COUNT postulantes (total, aprobados, reprobados, pendientes)
+     *   [2] COUNT grupos
+     *   [3] → 200 { total_inscritos, total_aprobados, total_reprobados, total_pendientes, total_grupos }
+     */
     public function dashboard()
     {
         $total_inscritos  = DB::table('postulante')->count();
@@ -30,7 +61,18 @@ class ReporteController extends Controller
         ]);
     }
 
-    // Lista general de postulantes
+    // ──────────────────────────────────────────────────────────────
+    // GET /api/reportes/postulantes
+    // ──────────────────────────────────────────────────────────────
+    /**
+     * Lista general de todos los postulantes con estado y promedio.
+     *
+     * DIAGRAMA DE SECUENCIA:
+     *   Cliente → GET /reportes/postulantes
+     *   [1] SELECT ci, nombres, apellidos, ciudad, estadopostulante, promedio_final
+     *       FROM postulante ORDER BY apellidos
+     *   [2] → 200 con array completo (sin paginación)
+     */
     public function postulantes()
     {
         $postulantes = DB::table('postulante')
@@ -41,7 +83,20 @@ class ReporteController extends Controller
         return response()->json($postulantes);
     }
 
-    // Postulantes aprobados
+    // ──────────────────────────────────────────────────────────────
+    // GET /api/reportes/aprobados
+    // ──────────────────────────────────────────────────────────────
+    /**
+     * Lista de postulantes APROBADOS ordenados por promedio descendente.
+     * El estado APROBADO lo asigna TRIGGER 2 automáticamente cuando
+     * el promedio ponderado de las 4 materias supera el mínimo.
+     *
+     * DIAGRAMA DE SECUENCIA:
+     *   Cliente → GET /reportes/aprobados
+     *   [1] SELECT ... FROM postulante WHERE estadopostulante='APROBADO'
+     *       ORDER BY promedio_final DESC
+     *   [2] → 200 con lista ordenada (el mejor alumno primero)
+     */
     public function aprobados()
 {
     $aprobados = DB::table('postulante')
@@ -53,7 +108,18 @@ class ReporteController extends Controller
     return response()->json($aprobados);
 }
 
-    // Postulantes reprobados
+    // ──────────────────────────────────────────────────────────────
+    // GET /api/reportes/reprobados
+    // ──────────────────────────────────────────────────────────────
+    /**
+     * Lista de postulantes REPROBADOS ordenados por promedio descendente.
+     *
+     * DIAGRAMA DE SECUENCIA:
+     *   Cliente → GET /reportes/reprobados
+     *   [1] SELECT ... FROM postulante WHERE estadopostulante='REPROBADO'
+     *       ORDER BY promedio_final DESC
+     *   [2] → 200 con lista
+     */
     public function reprobados()
 {
     $reprobados = DB::table('postulante')
@@ -65,7 +131,19 @@ class ReporteController extends Controller
     return response()->json($reprobados);
 }
 
-    // Estadísticas por materia
+    // ──────────────────────────────────────────────────────────────
+    // GET /api/reportes/estadisticas-materia
+    // ──────────────────────────────────────────────────────────────
+    /**
+     * Estadísticas agregadas por materia: total examinados, aprobados, reprobados y promedio.
+     *
+     * DIAGRAMA DE SECUENCIA:
+     *   Cliente → GET /reportes/estadisticas-materia
+     *   [1] examen JOIN materia GROUP BY materia
+     *   [2] Calcular: COUNT(*), SUM(APROBADO), SUM(REPROBADO), ROUND(AVG(promedio), 2)
+     *   [3] ORDER BY idmateria
+     *   [4] → 200 con array de { materia, total, aprobados, reprobados, promedio_general }
+     */
     public function estadisticasMateria()
     {
         $estadisticas = DB::table('examen as e')
@@ -84,7 +162,20 @@ class ReporteController extends Controller
         return response()->json($estadisticas);
     }
 
-    // Grupos con cantidad de aprobados
+    // ──────────────────────────────────────────────────────────────
+    // GET /api/reportes/grupos-aprobados
+    // ──────────────────────────────────────────────────────────────
+    /**
+     * Reporte de grupos con conteo de aprobados y reprobados.
+     *
+     * DIAGRAMA DE SECUENCIA:
+     *   Cliente → GET /reportes/grupos-aprobados
+     *   [1] grupos LEFT JOIN grupopostulantes LEFT JOIN postulante
+     *       GROUP BY grupo
+     *   [2] Calcular: COUNT(postulantes), SUM(APROBADO), SUM(REPROBADO)
+     *   [3] ORDER BY aprobados DESC
+     *   [4] → 200 con array de { nombregrupo, turno, capacidadmaxima, total_estudiantes, aprobados, reprobados }
+     */
     public function gruposAprobados()
     {
         $grupos = DB::table('grupos as g')
@@ -104,7 +195,19 @@ class ReporteController extends Controller
 
         return response()->json($grupos);
     }
-    // Docentes asignados por grupo (CU-16 faltante)
+    // ──────────────────────────────────────────────────────────────
+    // GET /api/reportes/docentes-por-grupo
+    // ──────────────────────────────────────────────────────────────
+    /**
+     * Lista qué docente enseña qué materia en cada grupo (asignaciones activas).
+     *
+     * DIAGRAMA DE SECUENCIA:
+     *   Cliente → GET /reportes/docentes-por-grupo
+     *   [1] docentegrupomateria JOIN docente JOIN grupos JOIN materia
+     *       WHERE dgm.estado = 'ACTIVO'
+     *   [2] ORDER BY idgrupo, idmateria
+     *   [3] → 200 con array de { idgrupo, nombregrupo, turno, iddocente, docente, materia }
+     */
     public function docentesPorGrupo()
     {
         $resultado = DB::table('docentegrupomateria as dgm')
@@ -127,8 +230,47 @@ class ReporteController extends Controller
         return response()->json($resultado);
     }
 
-    // Lógica de admisión por cupos y promedio
-public function admision()
+    // ──────────────────────────────────────────────────────────────
+    // POST /api/reportes/admision
+    // ──────────────────────────────────────────────────────────────
+    /**
+     * Ejecuta el algoritmo de admisión: asigna a cada postulante APROBADO
+     * a la carrera que le corresponde según cupo y promedio final.
+     *
+     * ALGORITMO (por cada carrera):
+     *   1. Obtener postulantes APROBADOS que eligieron esta carrera como 1ra opción
+     *      ordenados por promedio DESC (el mejor primero)
+     *   2. Asignar a los primeros N que quepan en el cupo → estadoadmision='ADMITIDO'
+     *   3. Para los que no caben en 1ra opción → intentar su 2da opción:
+     *      a. Si hay cupo en la 2da → estadoadmision='ADMITIDO' en opción 2
+     *      b. Si tampoco hay cupo → estadoadmision='NO_ADMITIDO' en ambas opciones
+     *
+     * ¡IMPORTANTE!: Este método ESCRIBE en carreraadmitida.estadoadmision.
+     * Se puede ejecutar múltiples veces (sobreescribe el resultado anterior).
+     *
+     * DIAGRAMA DE SECUENCIA:
+     *   Cliente → POST /reportes/admision
+     *
+     *   LOOP [por cada carrera en tabla carrera]
+     *     [1] Obtener aprobados con 1ra opción = esta carrera (ORDER BY promedio DESC)
+     *     LOOP [por cada postulante en orden de mérito]
+     *       ALT [hay cupo en 1ra opción]
+     *         → UPDATE carreraadmitida SET estadoadmision='ADMITIDO' (opción 1)
+     *         → admitidos1ra++
+     *       ALT [cupo lleno]
+     *         [2] Buscar su 2da opción
+     *         OPT [tiene 2da opción]
+     *           [3] Contar admitidos ya en esa 2da carrera
+     *           ALT [hay cupo en 2da opción]
+     *             → UPDATE estadoadmision='ADMITIDO' (opción 2)
+     *           ALT [2da también llena]
+     *             → UPDATE estadoadmision='NO_ADMITIDO' (ambas opciones)
+     *     FIN LOOP
+     *   FIN LOOP
+     *
+     *   [4] → 200 con resumen por carrera: { carrera, cupo, admitidos, disponibles }
+     */
+    public function admision()
 {
     // Obtener carreras con sus cupos
     $carreras = DB::table('carrera')->get();
@@ -203,8 +345,20 @@ public function admision()
     return response()->json($resultado);
 }
 
-// Reporte de admisión final
-public function reporteAdmision()
+    // ──────────────────────────────────────────────────────────────
+    // GET /api/reportes/admision
+    // ──────────────────────────────────────────────────────────────
+    /**
+     * Lista a todos los postulantes admitidos en alguna carrera (resultado de admision()).
+     *
+     * DIAGRAMA DE SECUENCIA:
+     *   Cliente → GET /reportes/admision
+     *   [1] carreraadmitida JOIN postulante JOIN carrera
+     *       WHERE estadoadmision = 'ADMITIDO'
+     *   [2] ORDER BY nombre_carrera, promedio_final DESC
+     *   [3] → 200 con array de { ci, nombres, apellidos, promedio_final, carrera, opcion }
+     */
+    public function reporteAdmision()
 {
     $admitidos = DB::table('carreraadmitida as ca')
         ->join('postulante as p', 'p.idpostulante', '=', 'ca.idpostulante')

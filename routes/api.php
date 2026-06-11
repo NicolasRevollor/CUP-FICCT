@@ -23,9 +23,19 @@ use App\Http\Controllers\GestionController;
 // ── Rutas públicas ───────────────────────────────────────────
 Route::post('/login',                    [AuthController::class,    'login']);
 Route::post('/recuperar-password',       [AuthController::class,    'recuperarPassword']);
-Route::post('/registro/intent',          [RegistroController::class,'crearIntent']);
-Route::post('/registro',                 [RegistroController::class,'registrar']);
+Route::post('/registro/intent',                              [RegistroController::class, 'crearIntent']);
+Route::post('/registro/pre',                                 [RegistroController::class, 'preRegistro']);
+Route::post('/registro/{idPostulante}/documentos',           [RegistroController::class, 'subirDocumentos']);
+Route::get('/registro/{idPostulante}/documentos',            [RegistroController::class, 'listarDocumentos']);
+Route::post('/registro/confirmar',                           [RegistroController::class, 'confirmarPago']);
+Route::post('/registro',                                     [RegistroController::class, 'registrar']);
 Route::post('/postulacion-docente',      [PostulacionDocenteController::class,'store']);
+Route::get('/carreras',                  fn() => response()->json(
+    \Illuminate\Support\Facades\DB::table('carrera')
+        ->where('estado', 'ACTIVO')
+        ->orderBy('nombre')
+        ->get(['idcarrera', 'nombre', 'cupomaximo'])
+));
 
 // ── Rutas protegidas ─────────────────────────────────────────
 Route::middleware('auth:sanctum')->group(function () {
@@ -45,9 +55,10 @@ Route::middleware('auth:sanctum')->group(function () {
     // Grupos
     Route::get('/grupos',                  [GrupoController::class, 'index']);
     Route::post('/grupos',                 [GrupoController::class, 'store']);
+    Route::post('/grupos/distribuir',                         [GrupoController::class, 'distribuirInscritos']);
+    Route::post('/grupos/asignar',                            [GrupoController::class, 'asignar']);
     Route::get('/grupos/{id}/postulantes',                    [GrupoController::class, 'postulantes']);
     Route::get('/grupos/{idGrupo}/examenes/{idMateria}',      [GrupoController::class, 'examenesGrupo']);
-    Route::post('/grupos/asignar',                            [GrupoController::class, 'asignar']);
     Route::put('/grupos/{id}/retirar',                        [GrupoController::class, 'retirar']);
 
     // Exámenes (ruta específica primero para evitar que {idPostulante} capture "materia")

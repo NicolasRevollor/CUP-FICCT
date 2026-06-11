@@ -25,6 +25,8 @@ import CargaMasiva            from './pages/CargaMasiva'
 import Aulas                  from './pages/Aulas'
 import Asistencia             from './pages/Asistencia'
 import Gestiones             from './pages/Gestiones'
+import Notas                from './pages/Notas'
+import CoordinadorDashboard from './pages/CoordinadorDashboard'
 
 function App() {
   return (
@@ -56,6 +58,8 @@ function App() {
         <Route path="/aulas"                  element={<Aulas />} />
         <Route path="/asistencia"             element={<Asistencia />} />
         <Route path="/gestiones"              element={<Gestiones />} />
+        <Route path="/notas"                  element={<Notas />} />
+        <Route path="/coordinador-dashboard"  element={<CoordinadorDashboard />} />
       </Routes>
     </BrowserRouter>
   )

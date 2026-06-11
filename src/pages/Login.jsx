@@ -46,7 +46,9 @@ function Login() {
           ? '/docente-dashboard'
           : data.usuario.rol === 'ESTUDIANTE'
             ? '/estudiante-dashboard'
-            : '/dashboard'
+            : data.usuario.rol === 'COORDINADOR'
+              ? '/coordinador-dashboard'
+              : '/dashboard'
         navigate(destino, { replace: true })
       } else {
         setError(data.message)

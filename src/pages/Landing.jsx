@@ -161,6 +161,8 @@ export default function Landing() {
     border:       '#374151',
     statBg:       '#1f2937',
     inputBg:      '#374151',
+    statAccent:   '#93c5fd',
+    statBorder:   '#2d4a7a',
   } : {
     sectionBg:    '#fff',
     sectionAltBg: '#f3f4f6',
@@ -171,6 +173,8 @@ export default function Landing() {
     border:       '#e5e7eb',
     statBg:       '#fff',
     inputBg:      '#f8f9fa',
+    statAccent:   '#0d2451',
+    statBorder:   '#e5e7eb',
   }
 
   const toggle = (id) => setCarreraAbierta(prev => prev === id ? null : id)
@@ -202,20 +206,27 @@ export default function Landing() {
 
           {/* Toggle idioma */}
           <button onClick={() => setLang(l => l === 'es' ? 'en' : 'es')}
-            style={{ background: 'rgba(255,255,255,.1)', border: '1px solid rgba(255,255,255,.15)', color: '#fff', padding: '5px 12px', borderRadius: 6, fontSize: 12, fontWeight: 700, cursor: 'pointer', letterSpacing: '.05em' }}>
+            className="landing-nav-btn"
+            style={{ background: 'rgba(255,255,255,.1)', border: '1px solid rgba(255,255,255,.15)', color: '#fff', padding: '5px 12px', borderRadius: 6, fontSize: 12, fontWeight: 700, letterSpacing: '.05em' }}>
             {lang === 'es' ? 'EN' : 'ES'}
           </button>
 
           {/* Toggle tema */}
           <button onClick={() => setDark(d => !d)}
-            style={{ background: 'rgba(255,255,255,.1)', border: '1px solid rgba(255,255,255,.15)', color: '#fff', width: 34, height: 34, borderRadius: 6, fontSize: 16, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-            <i className={`bi ${dark ? 'bi-sun' : 'bi-moon-stars'}`}></i>
+            className="landing-nav-btn"
+            title={dark ? 'Modo claro' : 'Modo oscuro'}
+            style={{ background: dark ? 'rgba(255,255,255,.15)' : 'rgba(255,255,255,.1)', border: `1px solid ${dark ? 'rgba(255,255,255,.3)' : 'rgba(255,255,255,.15)'}`, color: '#fff', width: 34, height: 34, borderRadius: 6, fontSize: 16, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+            <i className={`bi ${dark ? 'bi-sun-fill' : 'bi-moon-stars-fill'}`} style={{ transition: 'transform .3s', transform: dark ? 'rotate(20deg)' : 'rotate(0deg)' }}></i>
           </button>
 
-          <button onClick={() => navigate('/login')} style={{ background: 'rgba(255,255,255,.1)', border: '1px solid rgba(255,255,255,.2)', color: '#fff', padding: '7px 18px', borderRadius: 6, fontSize: 13, cursor: 'pointer' }}>
+          <button onClick={() => navigate('/login')}
+            className="landing-nav-btn"
+            style={{ background: 'rgba(255,255,255,.1)', border: '1px solid rgba(255,255,255,.2)', color: '#fff', padding: '7px 18px', borderRadius: 6, fontSize: 13 }}>
             {t.navAcceder}
           </button>
-          <button onClick={() => navigate('/tipo-inscripcion')} style={{ background: '#c62828', border: 'none', color: '#fff', padding: '7px 18px', borderRadius: 6, fontSize: 13, fontWeight: 600, cursor: 'pointer' }}>
+          <button onClick={() => navigate('/tipo-inscripcion')}
+            className="landing-btn-primary"
+            style={{ background: '#c62828', border: 'none', color: '#fff', padding: '7px 18px', borderRadius: 6, fontSize: 13, fontWeight: 600 }}>
             {t.navInscribirse}
           </button>
         </div>
@@ -236,10 +247,14 @@ export default function Landing() {
             {t.heroDesc}
           </p>
           <div style={{ display: 'flex', gap: 12, justifyContent: 'center', flexWrap: 'wrap' }}>
-            <button onClick={() => navigate('/tipo-inscripcion')} style={{ background: '#c62828', border: 'none', color: '#fff', padding: '13px 32px', borderRadius: 8, fontSize: 15, fontWeight: 700, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 8 }}>
+            <button onClick={() => navigate('/tipo-inscripcion')}
+              className="landing-btn-primary"
+              style={{ background: '#c62828', color: '#fff', padding: '13px 32px', borderRadius: 8, fontSize: 15, fontWeight: 700, display: 'flex', alignItems: 'center', gap: 8 }}>
               <i className="bi bi-person-plus"></i> {t.heroCta}
             </button>
-            <a href="#carreras" style={{ background: 'rgba(255,255,255,.1)', border: '1px solid rgba(255,255,255,.2)', color: '#fff', padding: '13px 32px', borderRadius: 8, fontSize: 15, fontWeight: 600, cursor: 'pointer', textDecoration: 'none', display: 'flex', alignItems: 'center', gap: 8 }}>
+            <a href="#carreras"
+              className="landing-btn-secondary"
+              style={{ background: 'rgba(255,255,255,.1)', border: '1px solid rgba(255,255,255,.2)', color: '#fff', padding: '13px 32px', borderRadius: 8, fontSize: 15, fontWeight: 600, gap: 8 }}>
               <i className="bi bi-mortarboard"></i> {t.heroVerCarreras}
             </a>
           </div>
@@ -250,10 +265,10 @@ export default function Landing() {
       <div style={{ background: th.sectionAltBg, padding: '36px 32px', transition: 'background .2s' }}>
         <div style={{ maxWidth: 1100, margin: '0 auto', display: 'grid', gridTemplateColumns: 'repeat(4,1fr)', gap: 20 }}>
           {STATS.map(s => (
-            <div key={s.label} style={{ background: th.statBg, border: `1px solid ${th.border}`, borderRadius: 10, padding: '20px 16px', textAlign: 'center', boxShadow: '0 1px 3px rgba(0,0,0,.06)', transition: 'background .2s' }}>
-              <i className={`bi ${s.icono}`} style={{ fontSize: 22, color: '#0d2451', marginBottom: 8, display: 'block' }}></i>
-              <div style={{ fontSize: 28, fontWeight: 800, color: '#0d2451', lineHeight: 1 }}>{s.valor}</div>
-              <div style={{ fontSize: 12, color: th.textMuted, marginTop: 4 }}>{s.label}</div>
+            <div key={s.label} style={{ background: th.statBg, border: `1px solid ${th.statBorder}`, borderRadius: 12, padding: '22px 16px', textAlign: 'center', boxShadow: '0 2px 8px rgba(0,0,0,.07)', transition: 'background .2s, border-color .2s' }}>
+              <i className={`bi ${s.icono}`} style={{ fontSize: 24, color: th.statAccent, marginBottom: 10, display: 'block' }}></i>
+              <div style={{ fontSize: 30, fontWeight: 800, color: th.statAccent, lineHeight: 1 }}>{s.valor}</div>
+              <div style={{ fontSize: 12, color: th.textMuted, marginTop: 6, fontWeight: 500 }}>{s.label}</div>
             </div>
           ))}
         </div>
@@ -351,7 +366,9 @@ export default function Landing() {
             ))}
           </div>
           <div style={{ textAlign: 'center', marginTop: 48 }}>
-            <button onClick={() => navigate('/tipo-inscripcion')} style={{ background: '#c62828', border: 'none', color: '#fff', padding: '14px 40px', borderRadius: 8, fontSize: 16, fontWeight: 700, cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: 10 }}>
+            <button onClick={() => navigate('/tipo-inscripcion')}
+              className="landing-btn-primary"
+              style={{ background: '#c62828', color: '#fff', padding: '14px 40px', borderRadius: 8, fontSize: 16, fontWeight: 700, display: 'inline-flex', alignItems: 'center', gap: 10 }}>
               <i className="bi bi-person-plus"></i> {t.procesoCta}
             </button>
           </div>

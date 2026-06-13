@@ -36,6 +36,7 @@ Route::get('/carreras',                  fn() => response()->json(
         ->orderBy('nombre')
         ->get(['idcarrera', 'nombre', 'cupomaximo'])
 ));
+Route::get('/carreras/{id}/admitidos',   [ReporteController::class, 'admitidosPorCarrera']);
 
 // ── Rutas protegidas ─────────────────────────────────────────
 Route::middleware('auth:sanctum')->group(function () {
@@ -61,8 +62,9 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::get('/grupos/{idGrupo}/examenes/{idMateria}',      [GrupoController::class, 'examenesGrupo']);
     Route::put('/grupos/{id}/retirar',                        [GrupoController::class, 'retirar']);
 
-    // Exámenes (ruta específica primero para evitar que {idPostulante} capture "materia")
+    // Exámenes (rutas específicas primero para evitar que {idPostulante} capture segmentos)
     Route::get('/examenes/materia/{idMateria}', [ExamenController::class, 'reporteMateria']);
+    Route::get('/notas',                        [ExamenController::class, 'resumen']);
     Route::get('/examenes/{idPostulante}',      [ExamenController::class, 'index']);
     Route::post('/examenes',                    [ExamenController::class, 'store']);
     Route::put('/examenes/{id}',                [ExamenController::class, 'update']);
@@ -133,6 +135,7 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::put('/horarios/{id}',       [AulaController::class, 'updateHorario']);
 
     // Docentes — asignación a grupos (CU-11)
+    Route::get('/docentes/{id}/habilitacion',                   [DocenteController::class, 'habilitacion']);
     Route::get('/docentes/{id}/grupos',                         [DocenteController::class, 'grupos']);
     Route::post('/docentes/{id}/asignar-grupo',                 [DocenteController::class, 'asignarGrupo']);
     Route::delete('/docentes/{id}/asignaciones/{idAsignacion}', [DocenteController::class, 'desasignarGrupo']);
@@ -156,4 +159,5 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::get('/reportes/docentes-por-grupo',  [ReporteController::class, 'docentesPorGrupo']);
     Route::post('/reportes/admision',            [ReporteController::class, 'admision']);
     Route::get('/reportes/admision',             [ReporteController::class, 'reporteAdmision']);
+    Route::get('/reportes/no-admitidos',         [ReporteController::class, 'noAdmitidos']);
 });

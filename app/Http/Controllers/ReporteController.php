@@ -271,79 +271,96 @@ class ReporteController extends Controller
      *   [4] → 200 con resumen por carrera: { carrera, cupo, admitidos, disponibles }
      */
     public function admision()
-{
-    // Obtener carreras con sus cupos
-    $carreras = DB::table('carrera')->get();
+    {
+        // Resetear todo a PENDIENTE para que el proceso sea idempotente
+        // (se puede correr varias veces sin acumular resultados anteriores)
+        DB::table('carreraadmitida')->update(['estadoadmision' => 'PENDIENTE']);
 
-    $resultado = [];
+        $carreras  = DB::table('carrera')->get();
+        $resultado = [];
 
-    foreach ($carreras as $carrera) {
-        // Obtener aprobados que eligieron esta carrera como 1ra opción
-        // ordenados por promedio de mayor a menor
-        $postulantes1ra = DB::table('postulante as p')
-            ->join('carreraadmitida as ca', function($join) use ($carrera) {
-                $join->on('ca.idpostulante', '=', 'p.idpostulante')
-                     ->where('ca.idcarrera', '=', $carrera->idcarrera)
-                     ->where('ca.opcion', '=', 1);
-            })
-            ->where('p.estadopostulante', 'APROBADO')
-            ->select('p.idpostulante', 'p.ci', 'p.nombres', 'p.apellidos', 'p.promedio_final')
-            ->orderBy('p.promedio_final', 'desc')
-            ->get();
+        foreach ($carreras as $carrera) {
+            // Postulantes APROBADOS que eligieron esta carrera como 1ra opción,
+            // ordenados de mayor a menor promedio (meritocracia)
+            $postulantes1ra = DB::table('postulante as p')
+                ->join('carreraadmitida as ca', function ($join) use ($carrera) {
+                    $join->on('ca.idpostulante', '=', 'p.idpostulante')
+                         ->where('ca.idcarrera', '=', $carrera->idcarrera)
+                         ->where('ca.opcion', '=', 1);
+                })
+                ->where('p.estadopostulante', 'APROBADO')
+                ->select('p.idpostulante', 'p.promedio_final')
+                ->orderBy('p.promedio_final', 'desc')
+                ->get();
 
-        $admitidos1ra = 0;
-        foreach ($postulantes1ra as $p) {
-            if ($admitidos1ra < $carrera->cupomaximo) {
-                // Admitir en 1ra opción
-                DB::table('carreraadmitida')
-                    ->where('idpostulante', $p->idpostulante)
-                    ->where('idcarrera', $carrera->idcarrera)
-                    ->where('opcion', 1)
-                    ->update(['estadoadmision' => 'ADMITIDO']);
-                $admitidos1ra++;
-            } else {
-                // Cupo lleno, derivar a 2da opción
-                $segunda = DB::table('carreraadmitida')
-                    ->where('idpostulante', $p->idpostulante)
-                    ->where('opcion', 2)
-                    ->first();
+            // Leer desde la BD cuántos ya fueron admitidos a esta carrera
+            // (pueden venir de 2da opción de carreras procesadas antes en el loop)
+            $admitidos = DB::table('carreraadmitida')
+                ->where('idcarrera', $carrera->idcarrera)
+                ->where('estadoadmision', 'ADMITIDO')
+                ->count();
 
-                if ($segunda) {
-                    // Contar admitidos en la 2da opción
-                    $admitidos2da = DB::table('carreraadmitida')
-                        ->where('idcarrera', $segunda->idcarrera)
-                        ->where('estadoadmision', 'ADMITIDO')
-                        ->count();
+            foreach ($postulantes1ra as $p) {
+                if ($admitidos < $carrera->cupomaximo) {
+                    DB::table('carreraadmitida')
+                        ->where('idpostulante', $p->idpostulante)
+                        ->where('idcarrera', $carrera->idcarrera)
+                        ->where('opcion', 1)
+                        ->update(['estadoadmision' => 'ADMITIDO']);
+                    $admitidos++;
+                } else {
+                    // Cupo lleno: intentar 2da opción del postulante
+                    $segunda = DB::table('carreraadmitida')
+                        ->where('idpostulante', $p->idpostulante)
+                        ->where('opcion', 2)
+                        ->first();
 
-                    $cupo2da = DB::table('carrera')
-                        ->where('idcarrera', $segunda->idcarrera)
-                        ->value('cupomaximo');
+                    if ($segunda) {
+                        $admitidos2da = DB::table('carreraadmitida')
+                            ->where('idcarrera', $segunda->idcarrera)
+                            ->where('estadoadmision', 'ADMITIDO')
+                            ->count();
 
-                    if ($admitidos2da < $cupo2da) {
-                        DB::table('carreraadmitida')
-                            ->where('idpostulante', $p->idpostulante)
-                            ->where('opcion', 2)
-                            ->update(['estadoadmision' => 'ADMITIDO']);
+                        $cupo2da = DB::table('carrera')
+                            ->where('idcarrera', $segunda->idcarrera)
+                            ->value('cupomaximo');
+
+                        if ($admitidos2da < $cupo2da) {
+                            DB::table('carreraadmitida')
+                                ->where('idpostulante', $p->idpostulante)
+                                ->where('opcion', 2)
+                                ->update(['estadoadmision' => 'ADMITIDO']);
+                        } else {
+                            DB::table('carreraadmitida')
+                                ->where('idpostulante', $p->idpostulante)
+                                ->update(['estadoadmision' => 'NO_ADMITIDO']);
+                        }
                     } else {
-                        // Ambas opciones llenas
+                        // No tiene 2da opción registrada
                         DB::table('carreraadmitida')
                             ->where('idpostulante', $p->idpostulante)
+                            ->where('opcion', 1)
                             ->update(['estadoadmision' => 'NO_ADMITIDO']);
                     }
                 }
             }
+
+            // Releer el total real de admitidos para el resumen
+            $totalAdmitidos = DB::table('carreraadmitida')
+                ->where('idcarrera', $carrera->idcarrera)
+                ->where('estadoadmision', 'ADMITIDO')
+                ->count();
+
+            $resultado[] = [
+                'carrera'     => $carrera->nombre,
+                'cupo'        => $carrera->cupomaximo,
+                'admitidos'   => $totalAdmitidos,
+                'disponibles' => max(0, $carrera->cupomaximo - $totalAdmitidos),
+            ];
         }
 
-        $resultado[] = [
-            'carrera'    => $carrera->nombre,
-            'cupo'       => $carrera->cupomaximo,
-            'admitidos'  => $admitidos1ra,
-            'disponibles'=> $carrera->cupomaximo - $admitidos1ra,
-        ];
+        return response()->json($resultado);
     }
-
-    return response()->json($resultado);
-}
 
     // ──────────────────────────────────────────────────────────────
     // GET /api/reportes/admision
@@ -358,6 +375,49 @@ class ReporteController extends Controller
      *   [2] ORDER BY nombre_carrera, promedio_final DESC
      *   [3] → 200 con array de { ci, nombres, apellidos, promedio_final, carrera, opcion }
      */
+    // ──────────────────────────────────────────────────────────────
+    // GET /api/reportes/no-admitidos
+    // ──────────────────────────────────────────────────────────────
+    /**
+     * Lista los postulantes APROBADOS que no ingresaron por cupo lleno.
+     * Son aquellos cuyas dos opciones quedaron en NO_ADMITIDO.
+     * Ordenados por promedio_final DESC (los que "casi entraron" primero).
+     */
+    public function noAdmitidos()
+    {
+        $rechazados = DB::table('postulante as p')
+            ->join('carreraadmitida as ca1', function ($join) {
+                $join->on('ca1.idpostulante', '=', 'p.idpostulante')
+                     ->where('ca1.opcion', '=', 1);
+            })
+            ->join('carrera as c1', 'c1.idcarrera', '=', 'ca1.idcarrera')
+            ->leftJoin('carreraadmitida as ca2', function ($join) {
+                $join->on('ca2.idpostulante', '=', 'p.idpostulante')
+                     ->where('ca2.opcion', '=', 2);
+            })
+            ->leftJoin('carrera as c2', 'c2.idcarrera', '=', 'ca2.idcarrera')
+            ->where('p.estadopostulante', 'APROBADO')
+            ->where('ca1.estadoadmision', 'NO_ADMITIDO')
+            ->whereNotExists(function ($q) {
+                $q->select(DB::raw(1))
+                  ->from('carreraadmitida')
+                  ->whereColumn('idpostulante', 'p.idpostulante')
+                  ->where('estadoadmision', 'ADMITIDO');
+            })
+            ->select(
+                'p.ci',
+                'p.nombres',
+                'p.apellidos',
+                'p.promedio_final',
+                'c1.nombre as carrera1',
+                DB::raw("COALESCE(c2.nombre, '—') as carrera2")
+            )
+            ->orderBy('p.promedio_final', 'desc')
+            ->get();
+
+        return response()->json($rechazados);
+    }
+
     public function reporteAdmision()
 {
     $admitidos = DB::table('carreraadmitida as ca')
@@ -379,5 +439,46 @@ class ReporteController extends Controller
 
     return response()->json($admitidos);
 }
-    
+
+    // ──────────────────────────────────────────────────────────────
+    // GET /api/carreras/{id}/admitidos  (ruta pública)
+    // ──────────────────────────────────────────────────────────────
+    /**
+     * Lista los admitidos en una carrera específica, ordenados por promedio DESC.
+     * Ruta pública: no requiere autenticación (se muestra en el landing).
+     *
+     * RESPUESTA:
+     * {
+     *   "carrera": { "idcarrera": 2, "nombre": "Ingeniería de Sistemas", "cupomaximo": 200 },
+     *   "admitidos": [
+     *     { "rank": 1, "ci": "...", "nombres": "...", "apellidos": "...", "promedio_final": 95.5, "opcion": 1 },
+     *     ...
+     *   ],
+     *   "total_admitidos": 185
+     * }
+     */
+    public function admitidosPorCarrera(int $id)
+    {
+        $carrera = DB::table('carrera')
+            ->where('idcarrera', $id)
+            ->first(['idcarrera', 'nombre', 'cupomaximo']);
+
+        if (!$carrera) {
+            return response()->json(['message' => 'Carrera no encontrada'], 404);
+        }
+
+        $admitidos = DB::table('carreraadmitida as ca')
+            ->join('postulante as p', 'p.idpostulante', '=', 'ca.idpostulante')
+            ->where('ca.idcarrera', $id)
+            ->where('ca.estadoadmision', 'ADMITIDO')
+            ->select('p.ci', 'p.nombres', 'p.apellidos', 'p.promedio_final', 'ca.opcion')
+            ->orderBy('p.promedio_final', 'desc')
+            ->get();
+
+        return response()->json([
+            'carrera'        => $carrera,
+            'admitidos'      => $admitidos,
+            'total_admitidos'=> $admitidos->count(),
+        ]);
+    }
 }

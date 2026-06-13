@@ -323,32 +323,134 @@ class DocenteController extends Controller
     }
 
     // ──────────────────────────────────────────────────────────────
+    // GET /api/docentes/{id}/habilitacion  (CU-11)
+    // ──────────────────────────────────────────────────────────────
+    /**
+     * Devuelve el estado de habilitación académica de un docente:
+     * si cumple el requisito mínimo y qué materias puede impartir.
+     *
+     * DIAGRAMA DE SECUENCIA:
+     *   Cliente → GET /docentes/5/habilitacion
+     *   [1] Verificar que el docente exista
+     *   ALT [no existe] → 404
+     *   [2] Evaluar habilitación: maestria || diplomadoedsup
+     *   [3] Evaluar qué materias son compatibles con su profesion
+     *   [4] → 200 { habilitado, razon, materias_habilitadas, credenciales }
+     */
+    public function habilitacion(int $id)
+    {
+        $docente = DB::table('docente')->where('iddocente', $id)->first();
+        if (!$docente) {
+            return response()->json(['message' => 'Docente no encontrado'], 404);
+        }
+
+        $tieneMaestria  = !empty(trim($docente->maestria ?? ''));
+        $tieneDiplomado = (bool) ($docente->diplomadoedsup ?? false);
+        $habilitado     = $tieneMaestria || $tieneDiplomado;
+
+        // Qué materias puede impartir según su profesion
+        $materiasDb         = DB::table('materia')->orderBy('idmateria')->get();
+        $materiasHabilitadas = [];
+
+        foreach ($materiasDb as $m) {
+            $compatible = $this->esCompatibleConMateria(
+                $docente->profesion ?? '',
+                $m->nombre
+            );
+            $materiasHabilitadas[] = [
+                'idmateria'  => $m->idmateria,
+                'nombre'     => $m->nombre,
+                'compatible' => $compatible,
+            ];
+        }
+
+        return response()->json([
+            'habilitado'          => $habilitado,
+            'razon'               => !$habilitado
+                ? 'Requiere maestría o diplomado en Educación Superior'
+                : ($tieneMaestria ? 'Tiene maestría registrada' : 'Tiene diplomado en Educación Superior'),
+            'credenciales'        => [
+                'profesion'      => $docente->profesion      ?: 'No registrada',
+                'maestria'       => $docente->maestria        ?: 'No registrada',
+                'diplomadoedsup' => $tieneDiplomado,
+            ],
+            'materias_habilitadas' => $materiasHabilitadas,
+        ]);
+    }
+
+    /**
+     * Verifica si la profesión del docente es compatible con una materia dada.
+     * Usa palabras clave por materia, basado en las áreas del conocimiento.
+     *
+     * @param string $profesion  Texto libre del campo profesion del docente
+     * @param string $materia    Nombre de la materia (Computación, Matemáticas, etc.)
+     * @return bool
+     */
+    private function esCompatibleConMateria(string $profesion, string $materia): bool
+    {
+        // Mapa de compatibilidad: materia → palabras clave en la profesión del docente.
+        // Si la profesión contiene al menos una → es compatible.
+        // Nota: en producción esto podría estar en una tabla de configuración.
+        $mapa = [
+            'Computación'  => ['informática', 'computación', 'sistemas', 'software', 'telemática', 'telecomunicaciones', 'ingeniería en computación'],
+            'Matemáticas'  => ['matemática', 'ingeniería', 'estadística', 'actuaría', 'ciencias exactas'],
+            'Inglés'       => ['inglés', 'idioma', 'lingüística', 'letras', 'traducción', 'filología', 'educación'],
+            'Física'       => ['física', 'ingeniería', 'ciencias exactas', 'geofísica'],
+        ];
+
+        // Si la materia no está en el mapa → no hay restricción configurada → permitir
+        if (!array_key_exists($materia, $mapa)) {
+            return true;
+        }
+
+        $profesionNorm = strtolower($profesion);
+        foreach ($mapa[$materia] as $palabra) {
+            if (str_contains($profesionNorm, $palabra)) {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    // ──────────────────────────────────────────────────────────────
     // POST /api/docentes/{id}/asignar-grupo  (CU-11)
     // ──────────────────────────────────────────────────────────────
     /**
-     * Asigna un docente a un grupo/materia.
-     * Regla: máximo 1 grupo activo por turno (MAÑANA o TARDE).
+     * Asigna un docente a un grupo/materia con 4 validaciones en cascada:
+     *
+     *   1. Habilitación académica mínima: maestría o diplomado en Ed. Superior
+     *   2. Compatibilidad profesión–materia: la profesión debe ser del área de la materia
+     *   3. Restricción de turno: máximo 1 grupo activo por turno (MAÑANA o TARDE)
+     *   4. Conflicto de horario: los horarios de los grupos no pueden solaparse
      *
      * DIAGRAMA DE SECUENCIA:
      *   Cliente → POST /docentes/5/asignar-grupo { idgrupo, idmateria }
      *
-     *   [1] Verificar que el docente exista
-     *   ALT [no existe] → 404
-     *   [2] Validar campos requeridos
-     *   [3] Verificar que el grupo y la materia existan
-     *   ALT [grupo no existe] → 404
-     *   ALT [materia no existe] → 404
+     *   [1] Verificar que existan: docente, grupo, materia
      *
-     *   [4] Verificar límite: ¿ya tiene un grupo activo en ese turno?
-     *       JOIN docentegrupomateria + grupos para saber el turno del grupo existente
-     *   ALT [ya tiene grupo en ese turno]
-     *     → 400 "El docente ya tiene un grupo en el turno X"
+     *   [2] VALIDACIÓN ACADÉMICA: maestria || diplomadoedsup
+     *   ALT [no cumple]
+     *     → 400 { message: "no cumple requisito mínimo", credenciales }
      *
-     *   [5] Verificar que no esté ya asignado al mismo grupo/materia (ACTIVO)
+     *   [3] VALIDACIÓN PROFESIÓN-MATERIA: compatibilidad por palabras clave
+     *   ALT [no compatible]
+     *     → 400 { message, profesion_docente, areas_requeridas }
+     *
+     *   [4] VALIDACIÓN TURNO: máximo 1 grupo por turno
+     *   ALT [turno ocupado]
+     *     → 400 { message: "ya tiene grupo en turno X" }
+     *
+     *   [5] VALIDACIÓN HORARIO: si el grupo tiene horario, verificar solapamiento
+     *       con los horarios de los otros grupos del docente
+     *   ALT [hay solapamiento]
+     *     → 400 { message, horario_existente, horario_solicitado }
+     *
+     *   [6] Verificar duplicado activo (mismo docente + grupo + materia)
      *   ALT [ya asignado] → 400
      *
-     *   [6] INSERT en docentegrupomateria con estado='ACTIVO'
-     *   [7] → 201 "Docente asignado al grupo correctamente"
+     *   [7] INSERT en docentegrupomateria (estado='ACTIVO')
+     *   [8] → 201 "Docente asignado al grupo correctamente"
      */
     public function asignarGrupo(Request $request, int $id)
     {
@@ -362,13 +464,45 @@ class DocenteController extends Controller
             'idmateria' => 'required|integer',
         ]);
 
-        // Verificar que el grupo y la materia existan
         $grupo   = DB::table('grupos')->where('idgrupo', $request->idgrupo)->first();
         $materia = DB::table('materia')->where('idmateria', $request->idmateria)->first();
         if (!$grupo)   return response()->json(['message' => 'Grupo no encontrado'], 404);
         if (!$materia) return response()->json(['message' => 'Materia no encontrada'], 404);
 
-        // Validar límite: máximo 1 grupo por turno por docente
+        // ── VALIDACIÓN 1: Habilitación académica mínima ───────────
+        // La normativa universitaria exige maestría O diplomado en Ed. Superior
+        $tieneMaestria  = !empty(trim($docente->maestria ?? ''));
+        $tieneDiplomado = (bool) ($docente->diplomadoedsup ?? false);
+
+        if (!$tieneMaestria && !$tieneDiplomado) {
+            return response()->json([
+                'message' => 'El docente no cumple el requisito académico mínimo: debe contar con maestría o diplomado en Educación Superior.',
+                'credenciales' => [
+                    'profesion'      => $docente->profesion ?: 'No registrada',
+                    'maestria'       => 'No registrada',
+                    'diplomadoedsup' => false,
+                ],
+            ], 400);
+        }
+
+        // ── VALIDACIÓN 2: Compatibilidad profesión–materia ────────
+        // La profesión del docente debe ser del área de la materia a impartir
+        if (!$this->esCompatibleConMateria($docente->profesion ?? '', $materia->nombre)) {
+            $mapa = [
+                'Computación'  => ['informática', 'computación', 'sistemas', 'software', 'telemática', 'telecomunicaciones'],
+                'Matemáticas'  => ['matemática', 'ingeniería', 'estadística', 'actuaría', 'ciencias exactas'],
+                'Inglés'       => ['inglés', 'idioma', 'lingüística', 'letras', 'traducción', 'filología'],
+                'Física'       => ['física', 'ingeniería', 'ciencias exactas'],
+            ];
+            return response()->json([
+                'message'           => "La profesión '{$docente->profesion}' no es compatible con la materia '{$materia->nombre}'.",
+                'profesion_docente' => $docente->profesion ?: 'No registrada',
+                'areas_requeridas'  => $mapa[$materia->nombre] ?? [],
+            ], 400);
+        }
+
+        // ── VALIDACIÓN 3: Límite de turno ─────────────────────────
+        // Máximo 1 grupo activo por turno (MAÑANA / TARDE / NOCHE)
         $turnoOcupado = DB::table('docentegrupomateria as dgm')
             ->join('grupos as g', 'g.idgrupo', '=', 'dgm.idgrupo')
             ->where('dgm.iddocente', $id)
@@ -382,7 +516,34 @@ class DocenteController extends Controller
             ], 400);
         }
 
-        // Evitar duplicado activo en mismo grupo/materia
+        // ── VALIDACIÓN 4: Conflicto de horario ────────────────────
+        // Si el grupo tiene horario definido, verificar que no se solape
+        // con los horarios de los otros grupos activos del docente
+        $horarioNuevo = DB::table('horarios')->where('idgrupo', $grupo->idgrupo)->first();
+        if ($horarioNuevo) {
+            $horariosActivos = DB::table('docentegrupomateria as dgm')
+                ->join('horarios as h', 'h.idgrupo', '=', 'dgm.idgrupo')
+                ->where('dgm.iddocente', $id)
+                ->where('dgm.estado', 'ACTIVO')
+                ->select('h.horarioinicio', 'h.horariofin', 'h.dias')
+                ->get();
+
+            foreach ($horariosActivos as $h) {
+                // Solapamiento: nuevo empieza antes de que termine el existente
+                // Y nuevo termina después de que empieza el existente
+                $solapa = ($horarioNuevo->horarioinicio < $h->horariofin)
+                       && ($horarioNuevo->horariofin   > $h->horarioinicio);
+                if ($solapa) {
+                    return response()->json([
+                        'message'            => "Conflicto de horario: el docente ya tiene clases de {$h->horarioinicio} a {$h->horariofin}.",
+                        'horario_existente'  => ['inicio' => $h->horarioinicio, 'fin' => $h->horariofin, 'dias' => $h->dias],
+                        'horario_solicitado' => ['inicio' => $horarioNuevo->horarioinicio, 'fin' => $horarioNuevo->horariofin],
+                    ], 400);
+                }
+            }
+        }
+
+        // ── Verificar duplicado activo ────────────────────────────
         $existe = DB::table('docentegrupomateria')
             ->where('iddocente',  $id)
             ->where('idgrupo',    $request->idgrupo)

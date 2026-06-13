@@ -66,6 +66,9 @@ function Grupos() {
   // true mientras se envía el formulario al servidor (deshabilita el botón Guardar)
   const [guardando, setGuardando] = useState(false)
 
+  // true mientras se ejecuta la distribución automática
+  const [distribuyendo, setDistribuyendo] = useState(false)
+
   // ── Función: cargar grupos del servidor ──
   const loadGrupos = () => {
     setLoading(true)
@@ -90,8 +93,12 @@ function Grupos() {
   // Si no hay sesión, no renderizamos nada (el useEffect ya redirigió)
   if (!usuario) return null
 
-  // Filtramos la lista según el filtro de turno activo
-  const filtrados = filtro === 'TODOS' ? grupos : grupos.filter(g => g.turno === filtro)
+  const TURNO_ORDER = { 'MAÑANA': 0, 'TARDE': 1, 'NOCHE': 2 }
+
+  // Filtramos y ordenamos: TODOS → Mañana, Tarde, Noche; filtro específico → solo ese turno
+  const filtrados = filtro === 'TODOS'
+    ? [...grupos].sort((a, b) => (TURNO_ORDER[a.turno] ?? 3) - (TURNO_ORDER[b.turno] ?? 3))
+    : grupos.filter(g => g.turno === filtro)
 
   // Calcula el porcentaje de ocupación de un grupo.
   // Math.min(100, ...) evita que supere el 100% si hay errores de datos.
@@ -144,6 +151,19 @@ function Grupos() {
     }
   }
 
+  // ── Función: distribuir todos los inscritos sin grupo ──
+  const distribuir = async () => {
+    if (!window.confirm('¿Distribuir automáticamente todos los postulantes sin grupo entre los grupos disponibles?')) return
+    setError(''); setExito(''); setDistribuyendo(true)
+    try {
+      const res  = await apiFetch('/api/grupos/distribuir', { method: 'POST' })
+      const data = await res.json()
+      if (res.ok) { setExito(data.message); loadGrupos() }
+      else          setError(data.message || 'Error al distribuir')
+    } catch { setError('Error de conexión') }
+    finally { setDistribuyendo(false) }
+  }
+
   // ── RENDER ──
   return (
     <div className="page">
@@ -160,11 +180,23 @@ function Grupos() {
             <button className="btn btn-outline" onClick={() => navigate('/dashboard')}>
               <i className="bi bi-arrow-left"></i> Volver
             </button>
-            {/* Botón "Nuevo Grupo" solo visible para ADMINISTRADOR */}
             {esAdmin && (
-              <button className="btn btn-primary" onClick={abrirNuevo}>
-                <i className="bi bi-plus"></i> Nuevo Grupo
-              </button>
+              <>
+                <button
+                  className="btn btn-outline"
+                  onClick={distribuir}
+                  disabled={distribuyendo}
+                  style={{ borderColor: '#0d9488', color: '#0d9488' }}
+                >
+                  {distribuyendo
+                    ? <><span className="spinner" style={{ width: 14, height: 14, borderWidth: 2, marginBottom: 0 }}></span> Distribuyendo...</>
+                    : <><i className="bi bi-shuffle"></i> Distribuir en grupos</>
+                  }
+                </button>
+                <button className="btn btn-primary" onClick={abrirNuevo}>
+                  <i className="bi bi-plus"></i> Nuevo Grupo
+                </button>
+              </>
             )}
           </div>
         </div>
@@ -224,9 +256,9 @@ function Grupos() {
                   </tr>
                 </thead>
                 <tbody>
-                  {filtrados.map(g => (
+                  {filtrados.map((g, idx) => (
                     <tr key={g.idgrupo}>
-                      <td className="td-muted">{g.idgrupo}</td>
+                      <td className="td-muted">{idx + 1}</td>
                       <td className="td-bold">{g.nombregrupo}</td>
                       <td>
                         {/* Badge de color según el turno */}

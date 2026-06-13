@@ -187,31 +187,22 @@ export default function AdmitidosCarrera() {
                   <tbody>
                     {filtrados.map((a, idx) => {
                       const rankReal = admitidos.findIndex(x => x.ci === a.ci) + 1
-                      const esTop3   = rankReal <= 3
-                      const medallaBg = rankReal === 1 ? '#fef3c7' : rankReal === 2 ? '#f3f4f6' : rankReal === 3 ? '#fef9c3' : 'transparent'
-                      const medallaColor = rankReal === 1 ? '#d97706' : rankReal === 2 ? '#6b7280' : rankReal === 3 ? '#92400e' : design.color
                       return (
                         <tr
                           key={a.ci}
                           style={{
                             borderBottom: '1px solid #f3f4f6',
-                            background: esTop3 ? medallaBg + '55' : idx % 2 === 0 ? '#fff' : '#fafafa',
+                            background: idx % 2 === 0 ? '#fff' : '#fafafa',
                             transition: 'background .12s',
                           }}
                           onMouseEnter={e => e.currentTarget.style.background = '#eff6ff'}
-                          onMouseLeave={e => e.currentTarget.style.background = esTop3 ? medallaBg + '55' : idx % 2 === 0 ? '#fff' : '#fafafa'}
+                          onMouseLeave={e => e.currentTarget.style.background = idx % 2 === 0 ? '#fff' : '#fafafa'}
                         >
                           {/* Rank */}
                           <td style={{ padding: '11px 16px', textAlign: 'center', width: 56 }}>
-                            {rankReal <= 3 ? (
-                              <span style={{ fontSize: 18 }}>
-                                {rankReal === 1 ? '🥇' : rankReal === 2 ? '🥈' : '🥉'}
-                              </span>
-                            ) : (
-                              <span style={{ fontWeight: 700, color: medallaColor, fontSize: 13 }}>
-                                {rankReal}
-                              </span>
-                            )}
+                            <span style={{ fontWeight: 700, color: design.color, fontSize: 13 }}>
+                              {rankReal}
+                            </span>
                           </td>
                           {/* CI */}
                           <td style={{ padding: '11px 16px', fontWeight: 600, color: '#111827', fontVariantNumeric: 'tabular-nums' }}>

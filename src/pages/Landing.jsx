@@ -187,11 +187,11 @@ export default function Landing() {
       .catch(() => {})
   }, [])
 
-  // Devuelve el idcarrera real de la BD para una carrera del array local
+  // Devuelve el idcarrera real de la BD usando la última palabra del nombre
+  // (única para cada carrera: Informática, Sistemas, Telecomunicaciones, Robótica)
   const getIdReal = (carreraLocal) => {
-    const found = apiCarreras.find(c =>
-      c.nombre.toLowerCase().includes(carreraLocal.nombre.split(' ')[1]?.toLowerCase() || '')
-    )
+    const ultimaPalabra = carreraLocal.nombre.split(' ').pop().toLowerCase()
+    const found = apiCarreras.find(c => c.nombre.toLowerCase().includes(ultimaPalabra))
     return found?.idcarrera ?? carreraLocal.id
   }
 

@@ -27,6 +27,7 @@ import Asistencia             from './pages/Asistencia'
 import Gestiones             from './pages/Gestiones'
 import Notas                from './pages/Notas'
 import CoordinadorDashboard from './pages/CoordinadorDashboard'
+import AdmitidosCarrera     from './pages/AdmitidosCarrera'
 
 function App() {
   return (
@@ -60,6 +61,7 @@ function App() {
         <Route path="/gestiones"              element={<Gestiones />} />
         <Route path="/notas"                  element={<Notas />} />
         <Route path="/coordinador-dashboard"  element={<CoordinadorDashboard />} />
+        <Route path="/admitidos/:id"          element={<AdmitidosCarrera />} />
       </Routes>
     </BrowserRouter>
   )

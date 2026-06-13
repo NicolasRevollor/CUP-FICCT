@@ -1,5 +1,6 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
+import BASE_URL from '../api'
 
 // ── Traducciones ───────────────────────────────────────────────
 const T = {
@@ -177,6 +178,23 @@ export default function Landing() {
     statBorder:   '#e5e7eb',
   }
 
+  const [apiCarreras, setApiCarreras] = useState([])
+
+  useEffect(() => {
+    fetch(`${BASE_URL}/api/carreras`)
+      .then(r => r.json())
+      .then(setApiCarreras)
+      .catch(() => {})
+  }, [])
+
+  // Devuelve el idcarrera real de la BD para una carrera del array local
+  const getIdReal = (carreraLocal) => {
+    const found = apiCarreras.find(c =>
+      c.nombre.toLowerCase().includes(carreraLocal.nombre.split(' ')[1]?.toLowerCase() || '')
+    )
+    return found?.idcarrera ?? carreraLocal.id
+  }
+
   const toggle = (id) => setCarreraAbierta(prev => prev === id ? null : id)
 
   const STATS = [
@@ -309,39 +327,61 @@ export default function Landing() {
             <p style={{ color: th.textMuted, marginTop: 8, fontSize: 14 }}>{t.carrerasSub}</p>
           </div>
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2,1fr)', gap: 16, alignItems: 'start' }}>
-            {CARRERAS[lang].map(c => (
-              <div key={c.id} style={{ background: th.cardBg, borderRadius: 12, border: `1px solid ${th.border}`, overflow: 'hidden', boxShadow: '0 1px 4px rgba(0,0,0,.06)', cursor: 'pointer', transition: 'background .2s' }} onClick={() => toggle(c.id)}>
-                <div style={{ padding: '20px 24px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', borderLeft: `4px solid ${c.color}` }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
-                    <div style={{ width: 44, height: 44, borderRadius: 10, background: c.color + '18', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                      <i className={`bi ${c.icono}`} style={{ fontSize: 20, color: c.color }}></i>
-                    </div>
-                    <div>
-                      <div style={{ fontWeight: 700, color: th.text, fontSize: 15 }}>{c.nombre}</div>
-                      <div style={{ fontSize: 12, color: th.textMuted, marginTop: 2 }}>{t.cupoLabel} {c.cupo} {t.cupoSuffix}</div>
-                    </div>
-                  </div>
-                  <i className={`bi ${carreraAbierta === c.id ? 'bi-chevron-up' : 'bi-chevron-down'}`} style={{ color: th.textMuted, fontSize: 16 }}></i>
-                </div>
-                {carreraAbierta === c.id && (
-                  <div style={{ padding: '0 24px 20px', borderTop: `1px solid ${th.border}` }}>
-                    <p style={{ color: th.textSub, fontSize: 14, lineHeight: 1.6, marginBottom: 14, marginTop: 14 }}>{c.descripcion}</p>
-                    <div style={{ background: th.inputBg, borderRadius: 8, padding: '14px 16px', marginBottom: 12 }}>
-                      <div style={{ fontSize: 12, fontWeight: 600, color: th.text, marginBottom: 6 }}>{t.perfilLabel}</div>
-                      <p style={{ fontSize: 13, color: th.textMuted, margin: 0, lineHeight: 1.5 }}>{c.perfil}</p>
-                    </div>
-                    <div>
-                      <div style={{ fontSize: 12, fontWeight: 600, color: th.text, marginBottom: 6 }}>{t.materiasLabel}</div>
-                      <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
-                        {c.materias.map(m => (
-                          <span key={m} style={{ background: c.color + '15', color: c.color, border: `1px solid ${c.color}40`, padding: '3px 10px', borderRadius: 20, fontSize: 11, fontWeight: 600 }}>{m}</span>
-                        ))}
+            {CARRERAS[lang].map(c => {
+              const idReal = getIdReal(c)
+              return (
+                <div key={c.id} style={{ background: th.cardBg, borderRadius: 12, border: `1px solid ${th.border}`, overflow: 'hidden', boxShadow: '0 1px 4px rgba(0,0,0,.06)', transition: 'box-shadow .2s, transform .2s' }}
+                  onMouseEnter={e => { e.currentTarget.style.boxShadow = '0 6px 20px rgba(0,0,0,.1)'; e.currentTarget.style.transform = 'translateY(-2px)' }}
+                  onMouseLeave={e => { e.currentTarget.style.boxShadow = '0 1px 4px rgba(0,0,0,.06)'; e.currentTarget.style.transform = 'translateY(0)' }}>
+
+                  {/* Header — click abre acordeón */}
+                  <div
+                    style={{ padding: '20px 24px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', borderLeft: `4px solid ${c.color}`, cursor: 'pointer' }}
+                    onClick={() => toggle(c.id)}
+                  >
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
+                      <div style={{ width: 44, height: 44, borderRadius: 10, background: c.color + '18', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                        <i className={`bi ${c.icono}`} style={{ fontSize: 20, color: c.color }}></i>
+                      </div>
+                      <div>
+                        <div style={{ fontWeight: 700, color: th.text, fontSize: 15 }}>{c.nombre}</div>
+                        <div style={{ fontSize: 12, color: th.textMuted, marginTop: 2 }}>{t.cupoLabel} {c.cupo} {t.cupoSuffix}</div>
                       </div>
                     </div>
+                    <i className={`bi ${carreraAbierta === c.id ? 'bi-chevron-up' : 'bi-chevron-down'}`} style={{ color: th.textMuted, fontSize: 16 }}></i>
                   </div>
-                )}
-              </div>
-            ))}
+
+                  {/* Acordeón desplegable */}
+                  {carreraAbierta === c.id && (
+                    <div style={{ padding: '0 24px 20px', borderTop: `1px solid ${th.border}` }}>
+                      <p style={{ color: th.textSub, fontSize: 14, lineHeight: 1.6, marginBottom: 14, marginTop: 14 }}>{c.descripcion}</p>
+                      <div style={{ background: th.inputBg, borderRadius: 8, padding: '14px 16px', marginBottom: 12 }}>
+                        <div style={{ fontSize: 12, fontWeight: 600, color: th.text, marginBottom: 6 }}>{t.perfilLabel}</div>
+                        <p style={{ fontSize: 13, color: th.textMuted, margin: 0, lineHeight: 1.5 }}>{c.perfil}</p>
+                      </div>
+                      <div style={{ marginBottom: 14 }}>
+                        <div style={{ fontSize: 12, fontWeight: 600, color: th.text, marginBottom: 6 }}>{t.materiasLabel}</div>
+                        <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
+                          {c.materias.map(m => (
+                            <span key={m} style={{ background: c.color + '15', color: c.color, border: `1px solid ${c.color}40`, padding: '3px 10px', borderRadius: 20, fontSize: 11, fontWeight: 600 }}>{m}</span>
+                          ))}
+                        </div>
+                      </div>
+
+                      {/* Botón Ver admitidos */}
+                      <button
+                        onClick={() => navigate(`/admitidos/${idReal}`)}
+                        style={{ width: '100%', background: c.color, border: 'none', color: '#fff', padding: '10px 18px', borderRadius: 8, fontSize: 13, fontWeight: 700, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, transition: 'all .2s', boxShadow: `0 3px 10px ${c.color}40` }}
+                        onMouseEnter={e => { e.currentTarget.style.filter = 'brightness(1.12)'; e.currentTarget.style.transform = 'translateY(-1px)' }}
+                        onMouseLeave={e => { e.currentTarget.style.filter = ''; e.currentTarget.style.transform = '' }}
+                      >
+                        <i className="bi bi-trophy"></i> Ver lista de admitidos
+                      </button>
+                    </div>
+                  )}
+                </div>
+              )
+            })}
           </div>
         </div>
       </div>

@@ -103,13 +103,22 @@ export default function Notas() {
               Vista consolidada de las 4 materias. Promedio ponderado: 30% + 30% + 40%.
             </p>
           </div>
-          <button
-            className="btn btn-outline"
-            onClick={() => navigate('/examenes')}
-            style={{ fontSize: 13 }}
-          >
-            <i className="bi bi-pencil-square"></i> Registrar / editar notas
-          </button>
+          <div style={{ display: 'flex', gap: 8 }}>
+            <button
+              className="btn btn-outline"
+              onClick={() => navigate('/dashboard')}
+              style={{ fontSize: 13 }}
+            >
+              <i className="bi bi-arrow-left"></i> Volver
+            </button>
+            <button
+              className="btn btn-outline"
+              onClick={() => navigate('/examenes')}
+              style={{ fontSize: 13 }}
+            >
+              <i className="bi bi-pencil-square"></i> Registrar / editar notas
+            </button>
+          </div>
         </div>
 
         {/* Filtros */}
